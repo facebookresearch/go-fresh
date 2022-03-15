@@ -1,0 +1,9 @@
+__pycache__/
+runs/
+.idea
+*.swp
+*.ipynb*
+
+outputs
+jobs
+.vscode
