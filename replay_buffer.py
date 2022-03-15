@@ -59,7 +59,7 @@ class ReplayBuffer(object):
                     goal}
             next_state = {'state': exploration_buffer.obss[traj_idx][step + 1],
                     'goal': goal}
-            reward = - reward_fn(next_state['state'], goal)
+            reward = reward_fn(next_state['state'], goal)
             self.push(state, exploration_buffer.actions[traj_idx][step + 1],
                     reward, next_state)
 

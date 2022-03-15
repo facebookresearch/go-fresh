@@ -25,4 +25,4 @@ def get_space_info(obs_cfg, action_dim):
     return space_info
 
 def oracle_reward(state, goal):
-    return np.linalg.norm(state[:2] - goal[:2])
+    return - np.linalg.norm(state[:2] - goal[:2])
