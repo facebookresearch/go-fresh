@@ -16,6 +16,7 @@ exploration_buffer:
 
 replay_buffer:
     capacity: 100000
+    reward_scaling: 0.01
 
 optim:
     num_epochs: 10
@@ -39,7 +40,7 @@ sac:
         gamma: 0.99
         target_update_interval: 1
         entropy:
-            alpha: 0.05
+            alpha: 0.01
             auto_tuning: false
             lr: 0.0003
         policy:

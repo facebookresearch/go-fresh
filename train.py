@@ -16,15 +16,19 @@ def main(cfg):
     exploration_buffer = ExplorationBuffer(cfg.exploration_buffer)
 
     replay_buffer = ReplayBuffer(cfg.replay_buffer, space_info, device)
-    replay_buffer.fill(exploration_buffer, utils.oracle_reward)
 
     agent = sac.SAC(cfg.sac, space_info, device)
 
     for epoch in range(cfg.optim.num_epochs):
         print(f"epoch: {epoch}")
 
+        #eval
         out = eval_offline.eval(agent, cfg.env, 500, 10)
         print(out)
+
+        #train
+        replay_buffer.flush()
+        replay_buffer.fill(exploration_buffer, utils.oracle_reward)
 
         stats = agent.train_one_epoch(replay_buffer)
         print(stats)

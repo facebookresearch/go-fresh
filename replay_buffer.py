@@ -59,9 +59,14 @@ class ReplayBuffer(object):
                     goal}
             next_state = {'state': exploration_buffer.obss[traj_idx][step + 1],
                     'goal': goal}
-            reward = reward_fn(next_state['state'], goal)
+            reward = self.cfg.reward_scaling * reward_fn(next_state['state'],
+                    goal)
             self.push(state, exploration_buffer.actions[traj_idx][step + 1],
                     reward, next_state)
+
+    def flush(self):
+        self.idx = 0
+        self.full = False
 
     def __len__(self):
         return self.capacity if self.full else self.idx
