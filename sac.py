@@ -18,10 +18,10 @@ def hard_update(target, source):
 
 
 class SAC(object):
-    def __init__(self, cfg, space_info, device):
-        self.space_info = space_info
-
+    def __init__(self, cfg, space_info, device, log):
         self.cfg = cfg
+        self.log = log
+        self.space_info = space_info
         self.alpha = cfg.optim.entropy.alpha
         self.device = device
 
@@ -156,12 +156,12 @@ class SAC(object):
         return stats
 
     # Save model parameters
-    def save_checkpoint(self, logs_dir, total_numsteps):
-        save_dir = os.path.join(logs_dir, 'policy_ckpt')
+    def save_checkpoint(self, logs_dir, epoch):
+        save_dir = os.path.join(logs_dir, 'agent')
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
-        save_path = os.path.join(save_dir, f'checkpoint_{total_numsteps}.pth')
-        print('Saving models to {}'.format(save_path))
+        save_path = os.path.join(save_dir, f'checkpoint_{epoch}.pth')
+        self.log.info('Saving agent to {}'.format(save_path))
         torch.save({'policy_state_dict': self.policy.state_dict(),
                     'critic_state_dict': self.critic.state_dict(),
                     'critic_target_state_dict': self.critic_target.state_dict(),

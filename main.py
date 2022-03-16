@@ -14,11 +14,10 @@ from exploration_buffer import ExplorationBuffer
 
 @hydra.main(config_path="conf", config_name="config.yaml")
 def main(cfg):
-
     log = logging.getLogger(__name__)
-    logs_dir = os.path.join('/checkpoint/linamezghani/offline-gcrl_logs',
-            cfg.main.name)
-    tb_log = Logger(logs_dir, cfg)
+    tb_log = Logger(cfg.main.logs_dir, cfg)
+
+    log.info(f'exp name: {cfg.main.name}')
 
     device = torch.device("cuda:0")
     space_info = utils.get_space_info(cfg.env.obs, cfg.env.action_dim)
@@ -27,7 +26,7 @@ def main(cfg):
 
     replay_buffer = ReplayBuffer(cfg.replay_buffer, space_info, device, log)
 
-    agent = sac.SAC(cfg.sac, space_info, device)
+    agent = sac.SAC(cfg.sac, space_info, device, log)
 
     procs, buffers, barriers, n_eval_done = eval.start_procs(cfg)
 
@@ -35,14 +34,14 @@ def main(cfg):
     for epoch in range(cfg.optim.num_epochs):
         log.info(f"epoch: {epoch}")
 
-        #eval
+        ## EVAL
         eval_stats = eval.run(agent, cfg.eval.num_episodes, buffers, barriers,
                 n_eval_done)
         log.info("eval " + ' - '.join([f"{k}: {v:.2f}" for k, v in
             eval_stats.items()]))
         tb_log.add_stats(eval_stats, epoch, 'eval')
 
-        #train
+        ## TRAIN
         replay_buffer.flush()
         replay_buffer.fill(exploration_buffer, utils.oracle_reward)
 
@@ -52,6 +51,9 @@ def main(cfg):
         num_updates += train_stats['updates']
         train_stats['updates'] = num_updates
         tb_log.add_stats(train_stats, epoch, 'train')
+
+        if epoch % cfg.main.save_interval == 0:
+            agent.save_checkpoint(cfg.main.logs_dir, epoch)
 
     for p in procs:
         p.join()
