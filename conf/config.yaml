@@ -21,6 +21,10 @@ replay_buffer:
 optim:
     num_epochs: 10
 
+eval:
+    num_episodes: 500
+    num_procs: 10
+
 sac:
     policy:
         type: Gaussian
