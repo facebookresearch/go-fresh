@@ -81,6 +81,8 @@ class SAC(object):
         return action.detach().cpu()
 
     def update_parameters(self, memory, batch_size, updates):
+        stats = {}
+
         # Sample a batch from memory
         (state_batch, action_batch, reward_batch, next_state_batch,
                 mask_batch) = memory.sample(batch_size=batch_size)
@@ -95,54 +97,62 @@ class SAC(object):
             next_q_value = (reward_batch + mask_batch * self.cfg.optim.gamma *
                     min_qf_next_target)
         qf1, qf2 = self.critic(state_batch, action_batch)  # Two Q-functions to mitigate positive bias in the policy improvement step
-        qf1_loss = F.mse_loss(qf1, next_q_value)  # JQ = 𝔼(st,at)~D[0.5(Q1(st,at) - r(st,at) - γ(𝔼st+1~p[V(st+1)]))^2]
-        qf2_loss = F.mse_loss(qf2, next_q_value)  # JQ = 𝔼(st,at)~D[0.5(Q1(st,at) - r(st,at) - γ(𝔼st+1~p[V(st+1)]))^2]
-        qf_loss = qf1_loss + qf2_loss
+        stats['qf1_loss'] = F.mse_loss(qf1, next_q_value)  # JQ = 𝔼(st,at)~D[0.5(Q1(st,at) - r(st,at) - γ(𝔼st+1~p[V(st+1)]))^2]
+        stats['qf2_loss'] = F.mse_loss(qf2, next_q_value)  # JQ = 𝔼(st,at)~D[0.5(Q1(st,at) - r(st,at) - γ(𝔼st+1~p[V(st+1)]))^2]
+        qf_loss = stats['qf1_loss'] + stats['qf2_loss']
 
         self.critic_optim.zero_grad()
         qf_loss.backward()
         self.critic_optim.step()
 
-        pi, log_pi, _ = self.policy.sample(state_batch)
+        pi, stats['log_pi'], _ = self.policy.sample(state_batch)
 
         qf1_pi, qf2_pi = self.critic(state_batch, pi)
         min_qf_pi = torch.min(qf1_pi, qf2_pi)
 
-        policy_loss = ((self.alpha * log_pi) - min_qf_pi).mean() # Jπ = 𝔼st∼D,εt∼N[α * logπ(f(εt;st)|st) − Q(st,f(εt;st))]
+        stats['policy_loss'] = ((self.alpha * stats['log_pi']) -
+                min_qf_pi).mean() # Jπ = 𝔼st∼D,εt∼N[α * logπ(f(εt;st)|st) − Q(st,f(εt;st))]
 
         self.policy_optim.zero_grad()
-        policy_loss.backward()
+        stats['policy_loss'].backward()
         self.policy_optim.step()
 
         if self.cfg.optim.entropy.auto_tuning:
-            alpha_loss = -(self.log_alpha * (log_pi +
+            stats['alpha_loss'] = -(self.log_alpha * (stats['log_pi'] +
                 self.target_entropy).detach()).mean()
 
             self.alpha_optim.zero_grad()
-            alpha_loss.backward()
+            stats['alpha_loss'].backward()
             self.alpha_optim.step()
 
             self.alpha = self.log_alpha.exp()
-            alpha_tlogs = self.alpha.clone() # For TensorboardX logs
+            stats['alpha_tlogs'] = self.alpha.clone() # For TensorboardX logs
         else:
-            alpha_loss = torch.tensor(0.).to(self.device)
-            alpha_tlogs = torch.tensor(self.alpha) # For TensorboardX logs
+            stats['alpha_loss'] = torch.tensor(0.).to(self.device)
+            stats['alpha_tlogs'] = torch.tensor(self.alpha) # For TensorboardX logs
 
 
         if updates % self.cfg.optim.target_update_interval == 0:
             soft_update(self.critic_target, self.critic, self.cfg.optim.tau)
 
-        out = (qf1_loss.item(), qf2_loss.item(), policy_loss.item(),
-                alpha_loss.item(), alpha_tlogs.item(), log_pi.mean().item())
-        return out
+        stats['log_pi'] = stats['log_pi'].mean()
+        for k, v in stats.items():
+            stats[k] = v.item()
+        return stats
 
     def train_one_epoch(self, replay_buffer):
         self.train()
-        updates = 0
+        stats = {}
         for i in range(self.cfg.optim.num_updates_per_epoch):
             out = self.update_parameters(replay_buffer,
-                    self.cfg.optim.batch_size, updates)
-            updates += 1
+                    self.cfg.optim.batch_size, i)
+            for k, v in out.items():
+                if not k in stats:
+                    stats[k] = 0.
+                stats[k] += v
+        for k, v in stats.items():
+            stats[k] = v / self.cfg.optim.num_updates_per_epoch
+        return stats
 
     # Save model parameters
     def save_checkpoint(self, logs_dir, total_numsteps):

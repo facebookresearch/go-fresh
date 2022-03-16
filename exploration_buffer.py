@@ -4,8 +4,9 @@ import numpy as np
 import multiprocessing as mp
 
 class ExplorationBuffer(object):
-    def __init__(self, cfg):
+    def __init__(self, cfg, log):
         self.cfg = cfg
+        self.log = log
         self.load_data(cfg.data_dir)
 
     def read_x(self, path):
@@ -24,10 +25,9 @@ class ExplorationBuffer(object):
         return traj_buffer
     
     def load_data(self, data_dir):
-        print("Loading trajectories...")
+        self.log.info("loading exploration buffer")
         ep_files = [os.path.join(data_dir, f) for f in os.listdir(data_dir)]
         x_list = self.parallel_read(ep_files, num_procs=self.cfg.num_procs)
-        print("done")
         self.obss = x_list["observation"]
         self.actions = x_list["action"]
         self.traj_len = self.obss.shape[1]

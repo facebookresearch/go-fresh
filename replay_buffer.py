@@ -2,13 +2,13 @@ import os
 import torch
 
 import numpy as np
-from tqdm import tqdm
 
 import utils
 
 class ReplayBuffer(object):
-    def __init__(self, cfg, space_info, device):
+    def __init__(self, cfg, space_info, device, log):
         self.cfg = cfg
+        self.log = log
         self.capacity = cfg.capacity
         self.device = device
         obs_shape = space_info['shape']['obs']
@@ -52,7 +52,8 @@ class ReplayBuffer(object):
         return states, actions, rewards, next_states, mask
 
     def fill(self, exploration_buffer, reward_fn):
-        for i in tqdm(range(self.capacity), desc="fill replay buffer"):
+        self.log.info("filling replay buffer")
+        for i in range(self.capacity):
             goal, _, _ = exploration_buffer.get_random_obs()
             _, traj_idx, step = exploration_buffer.get_random_obs()
             state = {'state': exploration_buffer.obss[traj_idx][step], 'goal':
