@@ -152,6 +152,7 @@ class SAC(object):
                 stats[k] += v
         for k, v in stats.items():
             stats[k] = v / self.cfg.optim.num_updates_per_epoch
+        stats['updates'] = self.cfg.optim.num_updates_per_epoch
         return stats
 
     # Save model parameters

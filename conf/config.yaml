@@ -1,3 +1,7 @@
+main:
+    name: ${now:%Y%m%d-%H%M%S}_${env.id}_${main.suffix}
+    suffix:
+
 env:
     id: maze_U4rooms
     success_thresh: 0.5
