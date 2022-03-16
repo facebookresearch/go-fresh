@@ -9,4 +9,4 @@ python main.py \
     sac.optim.num_updates_per_epoch=1000,2000,10000 \
     sac.optim.entropy.alpha=0.01,0.05,0.001,0.0001 \
     sac.optim.gamma=0.99,0.95,0.9 \
-	--multirun \
+    --multirun \
