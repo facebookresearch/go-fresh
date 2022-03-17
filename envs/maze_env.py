@@ -33,7 +33,22 @@ class MazeWrapper(BaseWrapper):
     def process_info(self, info, metrics):
         super().process_info(info, metrics)
         del info['position']
+        info_room = {}
+        for r in range(1, 5):
+            info_room[f'count-room{r}'] = int(r == self.room_goal)
+            for k, v in info.items():
+                info_room[f'{k}-room{r}'] = v if r == self.room_goal else 0
+        info.update(info_room)
         return info
+
+    def set_info_keys(self):
+        super().set_info_keys()
+        to_add = []
+        for r in range(1, 5):
+            to_add.append(f'count-room{r}')
+            for k in self.info_keys:
+                to_add.append(f'{k}-room{r}')
+        self.info_keys += to_add
 
     def oracle_distance(self, x1, x2):
         return np.linalg.norm(x1[:2] - x2[:2])
@@ -52,6 +67,24 @@ class MazeWrapper(BaseWrapper):
 
     def generate_topline_goals(self, n):
         return self.generate_points(n, random=True)
+
+    def get_room_xy(self, x, y):
+        if x < 12.5:
+            if y > -12.5:
+                return 1
+            return 2
+        if y > -12.5:
+            return 4
+        return 3
+
+    def get_room_goal(self):
+        goal_idx = self.get_goal_idx()
+        goal = self.get_goals()['state'][goal_idx]
+        return self.get_room_xy(*goal[:2])
+
+    def set_goal_idx(self, goal_idx):
+        super().set_goal_idx(goal_idx)
+        self.room_goal = self.get_room_goal()
 
     def get_xyori(self, x, y, ori=None):
         if ori is None:

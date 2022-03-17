@@ -5,8 +5,7 @@ import envs
 
 def start_procs(cfg):
     ctx = mp.get_context("fork")
-    buffers, barriers, n_eval_done = create_mputils(cfg.eval.num_procs, (7,),
-            (2,), ctx)
+    buffers, barriers, n_eval_done, info_keys = create_mputils(cfg, (7,), (2,), ctx)
 
     procs = []
     for i in range(cfg.eval.num_procs):
@@ -14,12 +13,12 @@ def start_procs(cfg):
             n_eval_done,))
         p.start()
         procs.append(p)
-    return procs, buffers, barriers, n_eval_done
+    return procs, buffers, barriers, n_eval_done, info_keys
 
-def run(agent, num_episodes, buffers, barriers, n_eval_done):
+def run(agent, num_episodes, buffers, barriers, n_eval_done, info_keys):
     agent.eval()
     n_eval_done.value = 0
-    eval_stat = {x: 0.0 for x in ['oracle_success', 'oracle_distance']}
+    eval_stat = {x: 0.0 for x in info_keys}
     barriers["sta"].wait()
     while n_eval_done.value < num_episodes:
         barriers["obs"].wait()
@@ -30,8 +29,15 @@ def run(agent, num_episodes, buffers, barriers, n_eval_done):
         barriers["stp"].wait()
         for x in eval_stat:
             eval_stat[x] += buffers[x].sum().item()
+
     for x in eval_stat:
-        eval_stat[x] /= n_eval_done.value
+        den = n_eval_done.value
+        if 'room' in x:
+            den = eval_stat[f"count-room{x[x.find('room') + 4]}"]
+            if 'count' in x:
+                den = 1
+        eval_stat[x] /= den
+
     barriers["end"].wait()
     return eval_stat
 
@@ -49,19 +55,20 @@ def worker_eval(cfg, i, buffers, barriers, n_eval_done):
             obs, _, _, info = env.step(buffers["act"][i])
             num_steps += 1
             if num_steps >= env._max_episode_steps:
-                for key in ['oracle_success', 'oracle_distance']:
-                    buffers[key][i] = info[key]
+                for k, v in info.items():
+                    buffers[k][i] = v
                 with n_eval_done.get_lock():
                     n_eval_done.value += 1
                 obs = env.reset()
                 num_steps = 0
             else:
-                for key in ['oracle_success', 'oracle_distance']:
-                    buffers[key][i] = 0
+                for k in info:
+                    buffers[k][i] = 0
             barriers["stp"].wait()
         barriers["end"].wait()
 
-def create_mputils(n, obs_space, act_space, ctx):
+def create_mputils(cfg, obs_space, act_space, ctx):
+    n = cfg.eval.num_procs
     Barrier = ctx.Barrier
     Value = ctx.Value
 
@@ -75,14 +82,18 @@ def create_mputils(n, obs_space, act_space, ctx):
 
     n_eval_done = Value('i', 0)
 
+    env = envs.make_env(cfg.env)
+    info_keys = env.info_keys
+    env.close()
+
     buffers = {}
     buffers["obs"] = torch.zeros((n, 2, *obs_space))
     buffers["act"] = torch.zeros((n, *act_space))
-    for x in ['oracle_success', 'oracle_distance']:
+    for x in info_keys:
         buffers[x] = torch.zeros(n)
 
     for k, v in buffers.items():
         v.share_memory_()
         buffers[k] = v
 
-    return buffers, barriers, n_eval_done
+    return buffers, barriers, n_eval_done, info_keys

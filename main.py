@@ -28,7 +28,7 @@ def main(cfg):
 
     agent = sac.SAC(cfg.sac, space_info, device, log)
 
-    procs, buffers, barriers, n_eval_done = eval.start_procs(cfg)
+    procs, buffers, barriers, n_eval_done, info_keys = eval.start_procs(cfg)
 
     num_updates = 0
     for epoch in range(cfg.optim.num_epochs):
@@ -36,7 +36,7 @@ def main(cfg):
 
         ## EVAL
         eval_stats = eval.run(agent, cfg.eval.num_episodes, buffers, barriers,
-                n_eval_done)
+                n_eval_done, info_keys)
         log.info("eval " + ' - '.join([f"{k}: {v:.2f}" for k, v in
             eval_stats.items()]))
         tb_log.add_stats(eval_stats, epoch, 'eval')

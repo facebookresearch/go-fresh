@@ -35,6 +35,7 @@ class BaseWrapper(gym.core.Wrapper):
         self.t = 0
         self._max_episode_steps = self.env._max_episode_steps
         self.set_observation_space()
+        self.set_info_keys()
         self.load_topline_goals()
 
     def seed(self, seed):
@@ -65,6 +66,9 @@ class BaseWrapper(gym.core.Wrapper):
         assert isinstance(self.observation_space, gym.spaces.dict.Dict)
         self.observation_space.spaces['time'] = gym.spaces.Box(np.zeros(1),
                 np.ones(1))
+
+    def set_info_keys(self):
+        self.info_keys = ['oracle_distance', 'oracle_success']
 
     def init_observation_space(self):
         raise NotImplementedError
@@ -124,6 +128,8 @@ class BaseWrapper(gym.core.Wrapper):
         return new_obs
 
     def process_info(self, info, metrics):
+        if 'TimeLimit.truncated' in info:
+            del info['TimeLimit.truncated']
         info.update(metrics)
         return info
 
