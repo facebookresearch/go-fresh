@@ -25,7 +25,7 @@ replay_buffer:
     reward_scaling: 0.01
 
 optim:
-    num_epochs: 100000
+    num_epochs: 1000
 
 eval:
     num_episodes: 500

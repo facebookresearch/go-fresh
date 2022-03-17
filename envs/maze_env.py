@@ -10,6 +10,7 @@ from mujoco_maze import maze_env, maze_task
 from mujoco_maze.maze_env_utils import MazeCell
 from gym.wrappers.time_limit import TimeLimit
 
+import envs.maze_utils as utils
 from envs.base_wrapper import BaseWrapper
 
 class MazeWrapper(BaseWrapper):
@@ -51,7 +52,7 @@ class MazeWrapper(BaseWrapper):
         self.info_keys += to_add
 
     def oracle_distance(self, x1, x2):
-        return np.linalg.norm(x1[:2] - x2[:2])
+        return utils.oracle_distance(x1, x2)
 
     def get_image(self):
         return self.unwrapped._render_image().transpose((2, 0, 1))
@@ -69,13 +70,7 @@ class MazeWrapper(BaseWrapper):
         return self.generate_points(n, random=True)
 
     def get_room_xy(self, x, y):
-        if x < 12.5:
-            if y > -12.5:
-                return 1
-            return 2
-        if y > -12.5:
-            return 4
-        return 3
+        return utils.get_room_xy(x, y)
 
     def get_room_goal(self):
         goal_idx = self.get_goal_idx()
