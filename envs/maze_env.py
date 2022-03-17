@@ -1,9 +1,9 @@
 import gym
 import torch
 import numpy as np
-
 import mujoco_maze
 import matplotlib.pyplot as plt
+
 from matplotlib import collections  as mc
 from typing import List
 from mujoco_maze import maze_env, maze_task
@@ -11,6 +11,7 @@ from mujoco_maze.maze_env_utils import MazeCell
 from gym.wrappers.time_limit import TimeLimit
 
 import envs.maze_utils as utils
+
 from envs.base_wrapper import BaseWrapper
 
 class MazeWrapper(BaseWrapper):
