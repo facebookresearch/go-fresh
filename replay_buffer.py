@@ -5,9 +5,10 @@ import numpy as np
 import utils
 
 class ReplayBuffer(object):
-    def __init__(self, cfg, space_info, device, log):
+    def __init__(self, cfg, space_info, device, log=None):
         self.cfg = cfg
-        self.log = log
+        self.print_fn = print if log is None else log.info
+
         self.capacity = cfg.capacity
         self.device = device
         obs_shape = space_info['shape']['obs']
@@ -51,7 +52,7 @@ class ReplayBuffer(object):
         return states, actions, rewards, next_states, mask
 
     def fill(self, exploration_buffer, reward_fn):
-        self.log.info("filling replay buffer")
+        self.print_fn("filling replay buffer")
         for i in range(self.capacity):
             goal, _, _ = exploration_buffer.get_random_obs()
             _, traj_idx, step = exploration_buffer.get_random_obs()

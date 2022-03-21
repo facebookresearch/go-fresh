@@ -11,8 +11,8 @@ env:
     action_repeat: 1
     random_start_pos: false
     obs:
-        type:
-        vec_size:
+        type: vec
+        vec_size: 7
         rgb_size:
     action_dim:
 
@@ -25,7 +25,7 @@ replay_buffer:
     reward_scaling: 0.01
 
 optim:
-    num_epochs: 1000
+    num_epochs: 1001
 
 eval:
     num_episodes: 500
@@ -55,6 +55,33 @@ sac:
             lr: 0.0003
         policy:
             lr: ${sac.optim.lr}  #use different LR for the policy
+
+rnet:
+    feat_size: 16
+    model:
+        hidden_size: 64
+        comparator: net
+        n_layers: 3
+        remove_velocity: true #remove velocity for maze
+    buffer:
+        in_traj_ratio: 0.5
+        thresh: 10
+        skip: 1
+        check_neg_obs: false
+        check_traj: false
+    memory:
+        capacity: 500
+        thresh: 0
+        oracle: false
+        oracle_check: false
+        graph:
+            from_buffer: true
+    train:
+        lr: 0.001
+        weight_decay: 0.00001
+        num_pairs: 100000
+        num_epochs: 10
+        batch_size: 512
 
 hydra:
     launcher:

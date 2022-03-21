@@ -53,7 +53,6 @@ class BaseWrapper(gym.core.Wrapper):
             self.set_goals({x: np.zeros((1, *self.observation_space[x].shape))
                 for x in ['state', 'image']})
         goals = self.get_goals()
-        goals['weights'] = (1/self.num_goals) * np.ones(self.num_goals)
         self.set_goals(goals)
 
     def save_topline_goals(self, goals):
@@ -154,8 +153,7 @@ class BaseWrapper(gym.core.Wrapper):
         return self.goal_idx
 
     def sample_goal_idx(self):
-        return np.random.choice(self.num_goals, size=1,
-                p=self.get_goals()['weights'])[0]
+        return np.random.choice(self.num_goals, size=1)[0]
 
     def init_stats_goal_idx(self):
         return {x: np.zeros(self.num_goals) for x in ['count',

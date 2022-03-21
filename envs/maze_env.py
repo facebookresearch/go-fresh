@@ -17,7 +17,7 @@ from envs.base_wrapper import BaseWrapper
 class MazeWrapper(BaseWrapper):
     def __init__(self, env, cfg):
         super().__init__(env, cfg)
-        if self.cfg.obs_type == 'rgb':
+        if self.cfg.obs.type == 'rgb':
             from mujoco_py import MjRenderContextOffscreen as MjRCO
             self.unwrapped._mj_offscreen_viewer = MjRCO(self.wrapped_env.sim)
             self.unwrapped._maybe_move_camera(self.unwrapped._mj_offscreen_viewer)
@@ -88,7 +88,7 @@ class MazeWrapper(BaseWrapper):
         self.wrapped_env.set_xy((x, y))
         self.wrapped_env.set_ori(ori)
         state = self.get_state()
-        if self.cfg.obs_type == 'vec':
+        if self.cfg.obs.type == 'vec':
             return state, None
         image = self.get_image()
         return state, image
@@ -132,14 +132,14 @@ class MazeWrapper(BaseWrapper):
 
     def generate_points(self, n, random):
         points = {'state': []}
-        if self.cfg.obs_type == 'rgb':
+        if self.cfg.obs.type == 'rgb':
             points['image'] = []
         if random:
             for i in range(n):
                 x, y = self.generate_random_point()
                 state, image = self.get_xyori(x, y)
                 points['state'].append(state)
-                if self.cfg.obs_type == 'rgb':
+                if self.cfg.obs.type == 'rgb':
                     points['image'].append(image)
         else:
             for x in np.arange(*self.xlim, (self.xlim[1] - self.xlim[0])/n):
@@ -147,18 +147,15 @@ class MazeWrapper(BaseWrapper):
                     if self.is_valid(x, y):
                         state, image = self.get_xyori(x, y)
                         points['state'].append(state)
-                        if self.cfg.obs_type == 'rgb':
+                        if self.cfg.obs.type == 'rgb':
                             points['image'].append(image)
         return {k: np.array(points[k]) for k in points}
 
-    def plot_goals(self, title=None, show_colorbar=True):
+    def plot_goals(self, title=None):
         fig = plt.figure()
         title = 'goals' if title is None else title
         goals = self.get_goals()
-        sc = plt.scatter(goals['state'][:, 0], goals['state'][:, 1],
-                c=goals['weights'])
-        if show_colorbar:
-            plt.colorbar(sc)
+        plt.scatter(goals['state'][:, 0], goals['state'][:, 1])
         plt.xlim(self.xlim)
         plt.ylim(self.ylim)
         plt.title(title)
