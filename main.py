@@ -7,6 +7,7 @@ import sac
 import eval
 import utils
 
+from rnet import RNet
 from logger import Logger
 from replay_buffer import ReplayBuffer
 from exploration_buffer import ExplorationBuffer
@@ -23,6 +24,8 @@ def main(cfg):
     space_info = utils.get_space_info(cfg.env.obs, cfg.env.action_dim)
 
     exploration_buffer = ExplorationBuffer(cfg.exploration_buffer, log)
+
+    rnet = RNet(cfg.rnet, space_info, device, exploration_buffer=None, log=log)
 
     replay_buffer = ReplayBuffer(cfg.replay_buffer, space_info, device, log)
 
@@ -43,7 +46,7 @@ def main(cfg):
 
         ## TRAIN
         replay_buffer.flush()
-        replay_buffer.fill(exploration_buffer, utils.oracle_reward)
+        replay_buffer.fill_unsup(exploration_buffer, rnet.memory.graph_dist)
 
         train_stats = agent.train_one_epoch(replay_buffer)
         log.info("train " + ' - '.join([f"{k}: {v:.2f}" for k, v in

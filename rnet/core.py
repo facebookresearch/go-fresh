@@ -147,11 +147,17 @@ class RNetMemory(Memory):
             self.embs[i] = emb
         return i
 
+    def save(self, path):
+        super().save(path, embs=True)
+
 class RNet:
-    def __init__(self, cfg, space_info, device, exploration_buffer=None):
+    def __init__(self, cfg, space_info, device, exploration_buffer=None,
+            log=None):
         self.cfg = cfg
         self.space_info = space_info
         self.device = device
+
+        self.print_fn = print if log is None else log.info
 
         if not exploration_buffer is None:
             self.buffer = RNetBuffer(exploration_buffer, cfg.buffer)
@@ -163,7 +169,8 @@ class RNet:
         self.model = self.model.to(self.device)
         self.optim = torch.optim.Adam(self.model.parameters(), lr=cfg.train.lr,
                 weight_decay=cfg.train.weight_decay)
-        print(self.model)
+        if not self.cfg.load_from is None:
+            self.load(self.cfg.load_from)
 
     def update(self, env, num_pairs, num_epochs):
         rnet_stats = self.update_model(num_pairs=num_pairs,
@@ -265,7 +272,6 @@ class RNet:
                     if novelty > 0:
                         if not self.cfg.memory.oracle_check:
                             nearest = self.memory.add(x, traj['state'][i], e)
-                            print("node added from traj", traj_idx)
                         else:
                             d = np.apply_along_axis(env.oracle_distance, 1,
                                     self.memory.states, traj['state'][i])
@@ -328,9 +334,9 @@ class RNet:
 
     def load(self, save_dir):
         model_path = os.path.join(save_dir, f'model.pth')
-        print('Loading rnet model from {}'.format(model_path))
+        self.print_fn('Loading rnet model from {}'.format(model_path))
         self.model.load(model_path)
 
         memory_path = os.path.join(save_dir, f'memory.npy')
-        print('Loading rnet memory from {}'.format(memory_path))
+        self.print_fn('Loading rnet memory from {}'.format(memory_path))
         self.memory.load(memory_path)

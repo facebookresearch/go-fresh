@@ -65,6 +65,20 @@ class ReplayBuffer(object):
             self.push(state, exploration_buffer.actions[traj_idx][step + 1],
                     reward, next_state)
 
+    def fill_unsup(self, exploration_buffer, graph_dist):
+        self.print_fn("filling replay buffer")
+        for i in range(self.capacity):
+            g_obs, g1, g2 = exploration_buffer.get_random_obs()
+            s_obs, s1, s2 = exploration_buffer.get_random_obs()
+            state = {'state': s_obs, 'goal': g_obs}
+            next_state = {'state': exploration_buffer.obss[s1][s2 + 1],
+                    'goal': g_obs}
+            nn_s = exploration_buffer.NN[s1, s2+1]
+            nn_g = exploration_buffer.NN[g1, g2]
+            reward = - self.cfg.reward_scaling * graph_dist[nn_s, nn_g]
+            self.push(state, exploration_buffer.actions[s1][s2 + 1], reward,
+                    next_state)
+
     def flush(self):
         self.idx = 0
         self.full = False

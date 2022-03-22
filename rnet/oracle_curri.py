@@ -20,32 +20,22 @@ class Memory:
         self.adj_matrix = np.zeros((cfg.capacity, cfg.capacity), dtype=bool)
         self.graph_dist = None
         self.graph_pred = None
-        self.goal_idx_pred = - np.ones(cfg.capacity, dtype=int)
 
     def __len__(self):
         return self.size
 
-    def add(self, obs, state, pred=-1):
+    def add(self, obs, state):
         if len(self) < self.cfg.capacity:
             i = len(self)
             self.size += 1
         else:
-            i = pred
-            #ensures we don't replace the pred of new node
-            while i == pred:
-                i = random.randint(0, len(self) - 1)
-            # set pred of succ of the goal_idx we are replacing equal to its pred
-            for j in range(len(self)):
-                if self.goal_idx_pred[j] == i:
-                    self.goal_idx_pred[j] = self.goal_idx_pred[i]
-
+            i = random.randint(0, len(self) - 1)
             if self.cfg.graph.from_buffer:
                 self.adj_matrix[i, :] = False
                 self.adj_matrix[:, i] = False
 
         self.obss[i] = obs
         self.states[i] = state
-        self.goal_idx_pred[i] = pred
         self.epoch_added[i] = self.epoch
         return i
 
@@ -111,30 +101,32 @@ class Memory:
             img = self.to_numpy(self.obss[i]).transpose((1, 2, 0))
             ax[i // num_cols, i % num_cols].imshow(img)
             ax[i // num_cols, i % num_cols].axis('off')
-            ax[i // num_cols, i % num_cols].set_title(f"{i},pred={self.goal_idx_pred[i]}")
+            ax[i // num_cols, i % num_cols].set_title(str(i))
         return fig
 
-    def save(self, path):
-        np.save(path, {
+    def save(self, path, embs=False):
+        to_save = {
             'obss': self.to_numpy(self.obss[:len(self)]),
             'states': self.states[:len(self)],
-            'goal_idx_pred': self.goal_idx_pred,
             'adj_matrix': self.adj_matrix,
             'graph_dist': self.graph_dist,
             'graph_pred': self.graph_pred,
-        })
+        }
+        if embs:
+            to_save['embs'] = self.to_numpy(self.embs[:len(self)])
+        np.save(path, to_save)
 
     def load(self, path):
         memory = np.load(path, allow_pickle=True).tolist()
         self.size = memory['obss'].shape[0]
         self.obss[:len(self)] = self.from_numpy(memory['obss'],
                 self.obss[:len(self)])
-        print(memory['states'].shape)
         self.states[:len(self)] = memory['states']
-        self.goal_idx_pred = memory.get('goal_idx_pred')
         self.adj_matrix = memory.get('adj_matrix')
         self.graph_dist = memory.get('graph_dist')
         self.graph_pred = memory.get('graph_pred')
+        if 'embs' in memory:
+            self.embs = torch.from_numpy(memory.get('embs'))
 
 class OracleMemory(Memory):
     def update(self, traj_buffer, env):
@@ -143,14 +135,12 @@ class OracleMemory(Memory):
         for i in tqdm(range(len(traj_buffer)), desc='update oracle memory'):
             for j in range(traj_buffer.cfg.traj_len):
                 if len(self) == 0:
-                    self.add(traj_buffer.obss[i, j], traj_buffer.states[i, j],
-                            pred=-1)
+                    self.add(traj_buffer.obss[i, j], traj_buffer.states[i, j])
                     continue
                 d = np.apply_along_axis(env.oracle_distance, 1,
                         self.states[:len(self)], traj_buffer.states[i, j])
                 if (d > env.oracle_thresh).all():
-                    self.add(traj_buffer.obss[i, j], traj_buffer.states[i, j],
-                            pred=traj_buffer.goal_idxs[i])
+                    self.add(traj_buffer.obss[i, j], traj_buffer.states[i, j])
 
     def compute_pairwise_dist(self, env, rnet_model):
         dist = np.zeros((len(self), len(self)))
