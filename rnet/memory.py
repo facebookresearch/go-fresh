@@ -1,4 +1,5 @@
 import torch
+import scipy.sparse.csgraph as csg
 
 import utils
 
@@ -65,6 +66,7 @@ class RNetMemory(GraphMemory):
         while True:
             n_components, labels = csg.connected_components(self.adj_matrix,
                     directed=False, return_labels=True)
+            print(f"number of connected components: {n_components}")
             if n_components == 1:
                 break
             components_count = np.bincount(labels)
