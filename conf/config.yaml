@@ -67,10 +67,10 @@ rnet:
         remove_velocity: true #remove velocity for maze
     dataset:
         thresh: 10
-        num_pairs: 100000
         in_traj_ratio: 0.5
-        check_neg_obs: false
-        check_traj: false
+        num_pairs:
+            train: 500000
+            val: 100000
     train:
         lr: 0.001
         num_epochs: 10

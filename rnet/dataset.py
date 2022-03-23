@@ -2,8 +2,9 @@ import torch
 import random
 
 class RNetPairsDataset(torch.utils.data.Dataset):
-    def __init__(self, cfg, traj_buffer):
+    def __init__(self, cfg, traj_buffer, num_pairs):
         self.cfg = cfg
+        self.num_pairs = num_pairs
         self.traj_buffer = traj_buffer
         self.traj_len = self.traj_buffer.traj_len
 
@@ -26,7 +27,7 @@ class RNetPairsDataset(torch.utils.data.Dataset):
         return low, high
 
     def __len__(self):
-        return self.cfg.num_pairs
+        return self.num_pairs
 
     def __getitem__(self, i, enforce_neg=False):
         pos = 0 if enforce_neg else random.randint(0, 1)
@@ -42,11 +43,12 @@ class RNetPairsDataset(torch.utils.data.Dataset):
             if self.get_break_condition(i1, i2, pos, in_traj):
                 break
 
-        if self.cfg.check_neg_obs:
-            if not pos and (traj1[i1] == traj2[i2]).all():
-                return self.__getitem__(i, enforce_neg=True)
-
         if random.random() > 0.5:
             return traj1[i1], traj2[i2], pos
         else:
             return traj2[i2], traj1[i1], pos
+
+class RNetPairsSplitDataset:
+    def __init__(self, cfg, traj_buffer):
+        self.train = RNetPairsDataset(cfg, traj_buffer, cfg.num_pairs.train)
+        self.val = RNetPairsDataset(cfg, traj_buffer, cfg.num_pairs.val)
