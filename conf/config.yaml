@@ -78,12 +78,10 @@ rnet:
         num_workers: 32
         weight_decay: 0.00001
     memory:
-        capacity: 500
         thresh: 0
-        oracle: false
-        oracle_check: false
-        graph:
-            from_buffer: true
+        capacity: 500
+        skip: 1
+        skip_traj: 0.05 #percentage of trajectories to skip
 
 hydra:
     launcher:

@@ -55,6 +55,7 @@ class RNetModel(nn.Module):
     def __init__(self, cfg, space_info):
         super(RNetModel, self).__init__()
 
+        self.feat_size = cfg.feat_size
         self.encoder = FeatureEncoder(cfg, space_info)
         self.comparator_type = cfg.comparator
         self.bias = nn.Parameter(torch.zeros(1))

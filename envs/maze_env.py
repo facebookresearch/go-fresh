@@ -210,13 +210,12 @@ class MazeWrapper(BaseWrapper):
             plt.axis('off')
         return fig
 
-    def plot_graph_dist(self, curri, show_path=True, start=None, end=None):
+    def plot_graph_dist(self, memory, show_path=True, start=None, end=None):
         fig = plt.figure()
-        states = curri.memory.states[:len(curri.memory)]
+        states = memory.states[:len(memory)]
         if end is None:
-            end = np.random.randint(0, len(curri.memory))
-        sc = plt.scatter(states[:, 0], states[:, 1],
-                c=-curri.memory.graph_dist[end])
+            end = np.random.randint(0, len(memory))
+        sc = plt.scatter(states[:, 0], states[:, 1], c=-memory.dist[end])
 
         if show_path:
             def retrieve_path(pred, i, j):
@@ -230,11 +229,11 @@ class MazeWrapper(BaseWrapper):
                 n_trials = 0
                 while True:
                     n_trials += 1
-                    start = np.random.randint(0, len(curri.memory))
+                    start = np.random.randint(0, len(memory))
                     if n_trials > 100 or np.linalg.norm(states[start, :2]) < 2:
                         break
 
-            path = retrieve_path(curri.memory.graph_pred, start, end)
+            path = retrieve_path(memory.pred, start, end)
             for j in range(len(path) - 1):
                 temp = states[[path[j], path[j+1]]]
                 plt.plot(temp[:, 0], temp[:, 1], color='red')
@@ -246,13 +245,13 @@ class MazeWrapper(BaseWrapper):
         plt.grid()
         return fig
 
-    def plot_graph(self, curri):
+    def plot_graph(self, memory):
         fig, ax = plt.subplots()
-        states = curri.memory.states[:len(curri.memory)]
+        states = memory.states[:len(memory)]
         lines = []
-        for i in range(len(curri.memory)):
+        for i in range(len(memory)):
             for j in range(i):
-                if curri.memory.adj_matrix[i, j]:
+                if memory.adj_matrix[i, j]:
                     lines.append([states[i, :2], states[j, :2]])
         lc = mc.LineCollection(lines, color='gray', alpha=0.5)
         ax.add_collection(lc)

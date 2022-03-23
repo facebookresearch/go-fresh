@@ -1,6 +1,11 @@
 import torch
+import random
 
-def main(cfg, model, dataset, device):
+from tqdm import tqdm
+
+from rnet.memory import RNetMemory
+
+def train(cfg, model, dataset, device):
     criterion = torch.nn.BCEWithLogitsLoss()
     optim = torch.optim.Adam(model.parameters(), lr=cfg.lr,
             weight_decay=cfg.weight_decay)
@@ -35,3 +40,27 @@ def main(cfg, model, dataset, device):
             stats['rnet_loss'], stats['rnet_acc']))
     model.eval()
     return stats
+
+def build_memory(cfg, space_info, model, exploration_buffer, device):
+    model.eval()
+    memory = RNetMemory(cfg, space_info, model.feat_size, device)
+
+    x = torch.from_numpy(exploration_buffer.get_obs(0, 0)).to(device)
+    memory.add_first_obs(model, x, exploration_buffer.get_state(0, 0))
+
+    for traj_idx in tqdm(range(len(exploration_buffer)), desc="Updating Memory"):
+        if random.random() > cfg.skip_traj:
+            continue
+        prev_NN = -1
+        traj = exploration_buffer.get_traj(traj_idx)
+        for i in range(0, exploration_buffer.traj_len, cfg.skip):
+            x = torch.from_numpy(traj['obs'][i]).to(device)
+            e, novelty, NN = memory.compute_novelty(model, x)
+            if novelty > 0:
+                NN = memory.add(x, traj['state'][i], e)
+            memory.add_edge(NN, prev_NN)
+            prev_NN = NN
+
+    memory.adj_matrix = memory.adj_matrix[:len(memory), :len(memory)]
+    memory.compute_dist()
+    return memory
