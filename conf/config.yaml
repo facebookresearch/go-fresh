@@ -19,7 +19,6 @@ env:
 exploration_buffer:
     data_dir: /checkpoint/${env:USER}/offline-gcrl/data/maze_U4rooms-rsp/random
     num_procs: 10
-    NN_path: ${rnet.load_from}/NN.npy
 
 replay_buffer:
     capacity: 100000

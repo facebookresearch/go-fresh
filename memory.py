@@ -1,4 +1,5 @@
 import torch
+import random
 import numpy as np
 import scipy.sparse.csgraph as csg
 
@@ -74,6 +75,7 @@ class Memory:
         self.obss[:len(self)] = self.from_numpy(memory['obss'],
                 self.obss[:len(self)])
         self.states[:len(self)] = memory['states']
+        return memory
 
 class GraphMemory(Memory):
     def __init__(self, cfg, space_info):
@@ -109,7 +111,8 @@ class GraphMemory(Memory):
         return to_save
 
     def load(self, path):
-        super().load()
+        memory = super().load(path)
         self.adj_matrix = memory.get('adj_matrix')
         self.dist = memory.get('dist')
         self.pred = memory.get('pred')
+        return memory

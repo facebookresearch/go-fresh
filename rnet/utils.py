@@ -1,5 +1,7 @@
+import os
 import torch
 import random
+import numpy as np
 
 from tqdm import tqdm
 
@@ -80,3 +82,49 @@ def build_memory(cfg, space_info, model, exploration_buffer, device):
     memory.adj_matrix = memory.adj_matrix[:len(memory), :len(memory)]
     memory.compute_dist()
     return memory
+
+def compute_NN(exploration_buffer, model, memory, device):
+    model.eval()
+    num_trajs, traj_len = len(exploration_buffer), exploration_buffer.traj_len
+    embs = torch.zeros((num_trajs, traj_len, model.feat_size))
+    for traj_idx in tqdm(range(num_trajs), desc="embed exploration buffer"):
+        traj = exploration_buffer.get_traj(traj_idx)['obs']
+        traj = torch.from_numpy(traj).float().to(device)
+        with torch.no_grad():
+            embs[traj_idx] = model.get_embedding(traj)
+
+    memory.embs = memory.embs.to(device)
+    NN = np.zeros((num_trajs, traj_len), dtype=int)
+    skip = memory.cfg.skip
+    for traj_idx in tqdm(range(num_trajs), desc="computing NN"):
+        for i in range(0, traj_len, skip):
+            j = i + skip // 2 if i + skip // 2 < traj_len else i
+            NN[traj_idx][i:i + skip] = memory.get_NN(model,
+                    embs[traj_idx][j].to(device))[0]
+    return NN
+
+def save(save_dir, model, memory, NN):
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+    print('Saving rnet objects to ', save_dir)
+
+    model_path = os.path.join(save_dir, 'model.pth')
+    model.save(model_path)
+
+    memory_path = os.path.join(save_dir, 'memory.npy')
+    memory.save(memory_path)
+
+    NN_path = os.path.join(save_dir, 'NN.npy')
+    np.save(NN_path, NN)
+
+def load(save_dir, model, memory, NN):
+    print('Loading rnet objects from ', save_dir)
+    model_path = os.path.join(save_dir, 'model.pth')
+    model.load(model_path)
+
+    memory_path = os.path.join(save_dir, 'memory.npy')
+    memory.load(memory_path)
+
+    NN_path = os.path.join(save_dir, 'NN.npy')
+    NN = np.load(NN_path)
+    return model, memory, NN

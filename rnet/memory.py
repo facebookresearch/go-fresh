@@ -84,7 +84,9 @@ class RNetMemory(GraphMemory):
     def dict_to_save(self):
         to_save = super().dict_to_save()
         to_save['embs'] = self.to_numpy(self.embs[:len(self)])
+        return to_save
 
     def load(self, path):
-        super().load()
+        memory = super().load(path)
         self.embs = torch.from_numpy(memory.get('embs'))
+        return memory
