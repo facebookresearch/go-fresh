@@ -6,7 +6,7 @@ import numpy as np
 from sklearn.decomposition import PCA
 
 class FeatureEncoder(nn.Module):
-    def __init__(self, cfg, space_info, feat_size):
+    def __init__(self, cfg, space_info):
         super(FeatureEncoder, self).__init__()
         self.cfg = cfg
         self.obs_type = space_info['obs_type']
@@ -22,7 +22,7 @@ class FeatureEncoder(nn.Module):
                 modules.append(nn.Linear(cfg.hidden_size, cfg.hidden_size))
                 modules.append(nn.BatchNorm1d(num_features=cfg.hidden_size))
                 modules.append(nn.Tanh())
-            modules.append(nn.Linear(cfg.hidden_size, feat_size))
+            modules.append(nn.Linear(cfg.hidden_size, cfg.feat_size))
 
         elif space_info['obs_type'] == 'rgb':
             n, m = obs_shape[1], obs_shape[2]
@@ -39,7 +39,7 @@ class FeatureEncoder(nn.Module):
                     nn.ReLU(),
                     nn.MaxPool2d((2, 2)),
                     nn.Flatten(),
-                    nn.Linear(conv_outdim, feat_size),
+                    nn.Linear(conv_outdim, cfg.feat_size),
             ]
 
         self.net = nn.Sequential(*modules)
@@ -52,29 +52,29 @@ class FeatureEncoder(nn.Module):
         return self.net(x)
 
 class RNetModel(nn.Module):
-    def __init__(self, cfg, space_info, feat_size=32):
+    def __init__(self, cfg, space_info):
         super(RNetModel, self).__init__()
 
-        self.encoder = FeatureEncoder(cfg, space_info, feat_size)
+        self.encoder = FeatureEncoder(cfg, space_info)
         self.comparator_type = cfg.comparator
         self.bias = nn.Parameter(torch.zeros(1))
         if self.comparator_type == "net":
             self.comparator = nn.Sequential(
-                nn.Linear(2 * feat_size, feat_size),
-                nn.BatchNorm1d(num_features=feat_size),
+                nn.Linear(2 * cfg.feat_size, cfg.feat_size),
+                nn.BatchNorm1d(num_features=cfg.feat_size),
                 nn.ReLU(),
-                nn.Linear(feat_size, 2),
+                nn.Linear(cfg.feat_size, 2),
             )
         elif self.comparator_type == "net_sym":
-            self.lin = nn.Linear(feat_size, feat_size)
+            self.lin = nn.Linear(cfg.feat_size, cfg.feat_size)
             self.comparator = nn.Sequential(
-                nn.Linear(feat_size, feat_size),
-                nn.BatchNorm1d(num_features=feat_size),
+                nn.Linear(cfg.feat_size, cfg.feat_size),
+                nn.BatchNorm1d(num_features=cfg.feat_size),
                 nn.ReLU(),
-                nn.Linear(feat_size, 2),
+                nn.Linear(cfg.feat_size, 2),
             )
         elif self.comparator_type == "dot-W":
-            self.W = nn.Parameter(torch.eye(feat_size))
+            self.W = nn.Parameter(torch.eye(cfg.feat_size))
 
     def forward(self, x1, x2=None, batchwise=False):
         e1 = self.encoder(x1)
