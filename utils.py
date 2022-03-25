@@ -1,7 +1,5 @@
 import torch
 
-from envs.maze_utils import oracle_distance
-
 TORCH_DTYPE = {'float32': torch.float32, 'uint8': torch.uint8}
 
 def get_space_info(obs_cfg, action_dim):
@@ -24,6 +22,3 @@ def get_space_info(obs_cfg, action_dim):
     else:
         raise ValueError(f"invalid obs_type: {obs_type}")
     return space_info
-
-def oracle_reward(x1, x2):
-    return - oracle_distance(x1, x2)

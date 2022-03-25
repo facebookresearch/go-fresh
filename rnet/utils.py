@@ -6,6 +6,7 @@ import numpy as np
 from tqdm import tqdm
 
 from rnet.memory import RNetMemory
+from envs.maze_utils import oracle_distance
 
 def train(cfg, model, dataset, device):
     criterion = torch.nn.BCEWithLogitsLoss()
@@ -102,6 +103,25 @@ def compute_NN(exploration_buffer, model, memory, device):
             NN[traj_idx][i:i + skip] = memory.get_NN(model,
                     embs[traj_idx][j].to(device))[0]
     return NN
+
+def oracle_reward(x1, x2):
+    return - oracle_distance(x1, x2)
+
+def fill_replay_buffer(replay_buffer, exploration_buffer, oracle=False,
+        NN=None, graph_dist=None):
+    print("filling replay buffer")
+    while not replay_buffer.is_full():
+        g_obs, g1, g2 = exploration_buffer.get_random_obs()
+        s_obs, s1, s2 = exploration_buffer.get_random_obs()
+        state = {'state': s_obs, 'goal': g_obs}
+        next_state = {'state': exploration_buffer.obss[s1][s2 + 1],
+                'goal': g_obs}
+        if oracle:
+            reward = oracle_reward(next_state['state'], goal)
+        else:
+            reward = graph_dist[NN[s1, s2+1], NN[g1, g2]]
+        replay_buffer.push(state, exploration_buffer.actions[s1][s2 + 1],
+                reward, next_state)
 
 def save(save_dir, model, memory, NN):
     if not os.path.exists(save_dir):

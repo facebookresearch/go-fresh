@@ -3,8 +3,6 @@ import random
 import numpy as np
 import multiprocessing as mp
 
-from tqdm import tqdm
-
 class ExplorationBuffer(object):
     def __init__(self, cfg, log=None):
         self.cfg = cfg
@@ -65,6 +63,3 @@ class ExplorationBuffer(object):
 
     def get_states_array(self):
         return self.states
-
-def get_reward_fn(self, traj1, traj2, obs1, obs2, graph_dist):
-    return - graph_dist(self.NN[traj1, obs1], self.NN[traj2, obs2])
