@@ -12,3 +12,7 @@ env:
         vec_size: 7
         rgb_size:
     action_dim: 2
+
+rnet:
+    model:
+        remove_velocity: true

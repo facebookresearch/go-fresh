@@ -1,0 +1,18 @@
+# @package _global_
+defaults:
+    - /config
+
+env:
+    id: walker
+    obs_type: vec
+    success_thresh: 0
+    max_episode_steps: 1000
+    obs:
+        type: vec
+        vec_size: 24
+        rgb_size:
+    action_dim: 6
+
+rnet:
+    model:
+        remove_velocity: false
