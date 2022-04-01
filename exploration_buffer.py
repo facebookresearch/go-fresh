@@ -11,25 +11,42 @@ class ExplorationBuffer(object):
 
     def read_x(self, path):
         with np.load(path) as data:
-            return data["observation"], data["action"]
-    
+            return dict(data)
+
     def parallel_read(self, files, num_procs):
         with mp.Pool(num_procs) as pool:
             x_list = pool.map(self.read_x, files)
-        traj_buffer = {"observation": [], "action": []}
+        traj_buffer = {}
         for x in x_list:
-            obs, a = x
-            traj_buffer["observation"].append(obs)
-            traj_buffer["action"].append(a)
+            for k, v in x.items():
+                if not k in traj_buffer:
+                    traj_buffer[k] = []
+                traj_buffer[k].append(v)
         traj_buffer = {k: np.stack(v) for k, v in traj_buffer.items()}
         return traj_buffer
+
+    def seq_img(self, files, num_procs, env):
+        for path in files:
+            with np.load(path) as data:
+                print(path)
+                state_traj = data["physics"]
+                data["image"] = []
+                for i in range(len(state_traj)):
+                    env.unwrapped._env.physics.set_state(state)
+                    env.unwrapped._env.physics.forward()
+                    data["image"].append(env.render(mode='rgb_array'))
+                data["image"] = np.stack(data["image"])
+                print(data["image"].shape)
+                print(data["image"].dtype)
+                sdkfjh
+            np.save(path, data)
     
     def load_data(self, data_dir):
         self.print_fn("loading exploration buffer")
         ep_files = [os.path.join(data_dir, f) for f in os.listdir(data_dir)]
         x_list = self.parallel_read(ep_files, num_procs=self.cfg.num_procs)
         self.obss = x_list["observation"]
-        self.states = x_list["observation"]
+        self.states = x_list["physics"]
         self.actions = x_list["action"]
         self.traj_len = self.obss.shape[1]
 

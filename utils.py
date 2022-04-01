@@ -7,18 +7,17 @@ def get_space_info(obs_cfg, action_dim):
     space_info['action_dim'] = action_dim
     space_info['key'] = {'state': 'state'}
     space_info['type'] = {'state': 'float32'}
+    space_info['shape'] = {'state': (obs_cfg.state_size,)}
     if obs_cfg.type == 'vec':
         space_info['key']['obs'] = 'state'
         space_info['key']['goal'] = 'goal'
         space_info['type']['obs'] = 'float32'
-        space_info['shape'] = {'state': (obs_cfg.vec_size,), 'obs':
-                (obs_cfg.vec_size,)}
+        space_info['shape']['obs'] = (obs_cfg.obs_size,)
     elif obs_cfg.type == 'rgb':
         space_info['key']['obs'] = 'image'
         space_info['key']['goal'] = 'image_goal'
         space_info['type']['obs'] = 'uint8'
-        space_info['shape'] = {'state': (obs_cfg.vec_size,), 'obs': (3,
-            obs_cfg.rgb_size, obs_cfg.rgb_size)}
+        space_info['shape']['obs'] = (3, obs_cfg.obs_size, obs_cfg.obs_size)
     else:
         raise ValueError(f"invalid obs_type: {obs_type}")
     return space_info

@@ -15,7 +15,7 @@ class FeatureEncoder(nn.Module):
         if space_info['obs_type'] == 'vec':
             obs_size = obs_shape[0]
             if self.cfg.remove_velocity:
-                obs_size = 3
+                obs_size = self.cfg.dims_to_keep
             modules = [nn.Linear(obs_size, cfg.hidden_size),
                     nn.BatchNorm1d(num_features=cfg.hidden_size), nn.Tanh()]
             for _ in range(1, cfg.n_layers - 1):
@@ -48,13 +48,12 @@ class FeatureEncoder(nn.Module):
         if self.obs_type == "rgb":
             x = x / 255.
         if self.cfg.remove_velocity:
-            x = x[:, :3]
+            x = x[:, :self.cfg.dims_to_keep]
         return self.net(x)
 
 class RNetModel(nn.Module):
     def __init__(self, cfg, space_info):
         super(RNetModel, self).__init__()
-
         self.feat_size = cfg.feat_size
         self.encoder = FeatureEncoder(cfg, space_info)
         self.comparator_type = cfg.comparator

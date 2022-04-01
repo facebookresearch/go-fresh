@@ -9,10 +9,11 @@ env:
     max_episode_steps: 100
     obs:
         type: vec
-        vec_size: 7
-        rgb_size:
+        state_size: 7
+        obs_size: 7
     action_dim: 2
 
 rnet:
     model:
         remove_velocity: true
+        dims_to_keep: 3
