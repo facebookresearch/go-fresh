@@ -29,14 +29,14 @@ class NormalizeActions:
         return self._env.step(original)
 
 class BaseWrapper(gym.core.Wrapper):
-    def __init__(self, env, cfg):
+    def __init__(self, env, cfg, space_info):
         super().__init__(env)
         self.cfg = cfg
         self.t = 0
         self._max_episode_steps = self.env._max_episode_steps
-        self.set_observation_space()
-        self.set_info_keys()
+        self.set_observation_space(space_info)
         self.load_topline_goals()
+        self.set_info_keys()
 
     def seed(self, seed):
         super().seed(seed)
@@ -60,8 +60,22 @@ class BaseWrapper(gym.core.Wrapper):
                 f'envs/topline_goals/{self.cfg.id}.npy')
         np.save(goals_file, goals)
 
-    def set_observation_space(self):
-        self.init_observation_space()
+    def init_observation_space(self, space_info):
+        if self.cfg.obs.type == 'vec':
+            low, high = -np.inf, np.inf
+            dtype = np.float32
+        else:
+            low, high = 0, 255
+            dtype = np.uint8
+        self.observation_space = gym.spaces.dict.Dict({
+            'state': gym.spaces.box.Box(-np.inf, np.inf,
+                space_info['shape']['state']),
+            'obs': gym.spaces.box.Box(low, high, space_info['shape']['obs'],
+                dtype=dtype)
+        })
+
+    def set_observation_space(self, space_info):
+        self.init_observation_space(space_info)
         assert isinstance(self.observation_space, gym.spaces.dict.Dict)
         self.observation_space.spaces['time'] = gym.spaces.Box(np.zeros(1),
                 np.ones(1))
@@ -69,19 +83,14 @@ class BaseWrapper(gym.core.Wrapper):
     def set_info_keys(self):
         self.info_keys = ['oracle_distance', 'oracle_success']
 
-    def init_observation_space(self):
-        raise NotImplementedError
-
     def get_s0(self):
         obs = self.reset()
-        if self.cfg.obs_type == 'rgb':
-            return obs['image']
-        return obs['state']
+        return obs['obs']
 
     def compute_metrics(self, obs):
         metrics = {}
         metrics['oracle_distance'] = self.oracle_distance(obs['state'],
-                obs['goal'])
+                obs['goal_state'])
         metrics['oracle_success'] = bool(metrics['oracle_distance'] <
                 self.cfg.success_thresh)
         return metrics
@@ -120,10 +129,12 @@ class BaseWrapper(gym.core.Wrapper):
         new_obs = {'time': self.t / self._max_episode_steps}
         goal_idx = self.get_goal_idx()
         new_obs['state'] = self.get_state_from_obs(obs)
-        new_obs['goal'] = self.get_goals()['state'][goal_idx]
-        if self.cfg.obs_type == 'rgb':
-            new_obs['image'] = self.get_image_from_obs(obs)
-            new_obs['image_goal'] = self.get_goals()['image'][goal_idx]
+        new_obs['goal_state'] = self.get_goals()['state'][goal_idx]
+        if self.cfg.obs.type == 'rgb':
+            new_obs['obs'] = self.get_image_from_obs(obs)
+        else:
+            new_obs['obs'] = new_obs['state']
+        new_obs['goal_obs'] = self.get_goals()[f'{self.cfg.obs.type}_obs'][goal_idx]
         return new_obs
 
     def process_info(self, info, metrics):

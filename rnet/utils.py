@@ -113,10 +113,11 @@ def fill_replay_buffer(replay_buffer, exploration_buffer, oracle=False,
     while not replay_buffer.is_full():
         g_obs, g1, g2 = exploration_buffer.get_random_obs()
         s_obs, s1, s2 = exploration_buffer.get_random_obs()
-        state = {'state': s_obs, 'goal': g_obs}
-        next_state = {'state': exploration_buffer.obss[s1][s2 + 1],
-                'goal': g_obs}
+        state = {'obs': s_obs, 'goal_obs': g_obs}
+        next_state = {'obs': exploration_buffer.obss[s1][s2 + 1], 'goal_obs':
+                g_obs}
         if oracle:
+            #TO-DO: Fix this
             reward = oracle_reward(next_state['state'], goal)
         else:
             reward = graph_dist[NN[s1, s2+1], NN[g1, g2]]
@@ -137,14 +138,18 @@ def save(save_dir, model, memory, NN):
     NN_path = os.path.join(save_dir, 'NN.npy')
     np.save(NN_path, NN)
 
-def load(save_dir, model, memory, NN):
+def load(save_dir, memory, model=None):
     print('Loading rnet objects from ', save_dir)
-    model_path = os.path.join(save_dir, 'model.pth')
-    model.load(model_path)
+    if not model is None:
+        model_path = os.path.join(save_dir, 'model.pth')
+        model.load(model_path)
 
     memory_path = os.path.join(save_dir, 'memory.npy')
     memory.load(memory_path)
 
     NN_path = os.path.join(save_dir, 'NN.npy')
     NN = np.load(NN_path)
-    return model, memory, NN
+
+    if model is None:
+        return memory, NN
+    return memory, NN, model

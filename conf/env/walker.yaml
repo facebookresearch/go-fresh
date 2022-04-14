@@ -5,7 +5,7 @@ defaults:
 env:
     id: walker
     obs_type: vec
-    success_thresh: 0
+    success_thresh: 0.7
     max_episode_steps: 1000
     obs:
         type: vec
@@ -13,7 +13,14 @@ env:
         obs_size: 24
     action_dim: 6
 
+exploration_buffer:
+    data_dir: /checkpoint/${env:USER}/offline-gcrl/data/walker/proto/buffer
+
+eval:
+    num_episodes: 100
+
 rnet:
+    load_from: /checkpoint/${env:USER}/offline-gcrl/rnet/walker_thresh2
     model:
         remove_velocity: true
         dims_to_keep: 15

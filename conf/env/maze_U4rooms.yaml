@@ -13,7 +13,11 @@ env:
         obs_size: 7
     action_dim: 2
 
+exploration_buffer:
+    data_dir: /checkpoint/${env:USER}/offline-gcrl/data/maze_U4rooms-rsp/random
+
 rnet:
+    load_from: /checkpoint/${env:USER}/offline-gcrl/rnet/maze_U4rooms-rsp/
     model:
         remove_velocity: true
         dims_to_keep: 3
