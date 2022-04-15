@@ -104,10 +104,7 @@ class MazeWrapper(BaseWrapper):
         return True
 
     def generate_random_ori(self):
-        ORI_IND = self.wrapped_env.ORI_IND
-        orimin, orimax = (self.observation_space['state'].low[ORI_IND],
-                self.observation_space['state'].high[ORI_IND])
-        return np.random.uniform(orimin, orimax)
+        return np.random.uniform(-np.pi, np.pi)
 
     def set_random_pos(self):
         x, y = self.generate_random_point()

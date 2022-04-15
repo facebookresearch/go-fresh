@@ -3,6 +3,7 @@ main:
     suffix:
     logs_dir: /checkpoint/${env:USER}/offline-gcrl/logs/${main.name}
     save_interval: 100
+    oracle_reward: false
 
 env:
     id: maze_U4rooms

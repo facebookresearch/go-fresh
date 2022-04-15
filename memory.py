@@ -115,4 +115,6 @@ class GraphMemory(Memory):
         self.adj_matrix = memory.get('adj_matrix')
         self.dist = memory.get('dist')
         self.pred = memory.get('pred')
+        if self.dist is None:
+            self.compute_dist()
         return memory

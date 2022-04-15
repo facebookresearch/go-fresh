@@ -27,10 +27,14 @@ def main(cfg):
 
     exploration_buffer = ExplorationBuffer(cfg.exploration_buffer, log)
 
-    rnet_memory = RNetMemory(cfg.rnet.memory, space_info,
-            cfg.rnet.model.feat_size, device)
-    rnet_memory, NN = rnet_utils.load(cfg.rnet.load_from, rnet_memory)
-    rnet_memory.compute_dist()
+    kwargs = dict(oracle=cfg.main.oracle_reward)
+    if not cfg.main.oracle_reward:
+        rnet_memory = RNetMemory(cfg.rnet.memory, space_info,
+                cfg.rnet.model.feat_size, device)
+        rnet_memory, NN = rnet_utils.load(cfg.rnet.load_from, rnet_memory)
+
+        kwargs["NN"] = NN
+        kwargs["graph_dist"] = rnet_memory.dist
 
     replay_buffer = ReplayBuffer(cfg.replay_buffer, space_info, device)
 
@@ -52,8 +56,8 @@ def main(cfg):
 
         ## TRAIN
         replay_buffer.flush()
-        rnet_utils.fill_replay_buffer(replay_buffer, exploration_buffer, NN=NN,
-                graph_dist=rnet_memory.dist)
+        rnet_utils.fill_replay_buffer(replay_buffer, exploration_buffer,
+                **kwargs)
 
         train_stats = agent.train_one_epoch(replay_buffer)
         log.info("train " + ' - '.join([f"{k}: {v:.2f}" for k, v in

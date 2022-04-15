@@ -117,10 +117,10 @@ def fill_replay_buffer(replay_buffer, exploration_buffer, oracle=False,
         next_state = {'obs': exploration_buffer.obss[s1][s2 + 1], 'goal_obs':
                 g_obs}
         if oracle:
-            #TO-DO: Fix this
-            reward = oracle_reward(next_state['state'], goal)
+            reward = oracle_reward(exploration_buffer.states[s1][s2 + 1],
+                    exploration_buffer.states[g1][g2])
         else:
-            reward = graph_dist[NN[s1, s2+1], NN[g1, g2]]
+            reward = - graph_dist[NN[s1, s2+1], NN[g1, g2]]
         replay_buffer.push(state, exploration_buffer.actions[s1][s2 + 1],
                 reward, next_state)
 
