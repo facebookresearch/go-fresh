@@ -56,13 +56,8 @@ class SAC(object):
         self.policy_optim = Adam(self.policy.parameters(),
                 lr=cfg.optim.policy.lr)
 
-    def process_state(self, state):
-        obs = state[self.space_info['key']['obs']]
-        goal = state[self.space_info['key']['goal']]
-        return np.stack((obs, goal))
-
     def select_action(self, state, evaluate=False):
-        proc_state = self.process_state(state)
+        proc_state = np.stack((state['obs'], state['goal_obs']))
         proc_state = torch.FloatTensor(proc_state).to(self.device).unsqueeze(0)
         if evaluate is False:
             action, _, _ = self.policy.sample(proc_state)

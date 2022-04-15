@@ -41,7 +41,7 @@ class Memory:
     def get_goals(self):
         return {
                 'state': self.states[:len(self)],
-                'image': self.to_numpy(self.obss[:len(self)]),
+                f'{self.space_info["obs_type"]}_obs': self.to_numpy(self.obss[:len(self)]),
         }
 
     def vis_sample(self, n=None, num_cols=10):

@@ -10,7 +10,8 @@ env:
     obs:
         type: vec
         state_size: 18
-        obs_size: 24
+        vec_size: 24
+        rgb_size: 64
     action_dim: 6
 
 exploration_buffer:
