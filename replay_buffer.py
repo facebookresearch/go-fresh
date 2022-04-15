@@ -26,9 +26,7 @@ class ReplayBuffer(object):
         self.full = False
 
     def process_state(self, state):
-        obs = state[self.space_info['key']['obs']]
-        goal = state[self.space_info['key']['goal']]
-        return np.stack((obs, goal))
+        return np.stack((state['obs'], state['goal_obs']))
 
     def push(self, state, action, reward, next_state):
         proc_state = self.process_state(state)

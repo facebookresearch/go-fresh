@@ -41,7 +41,7 @@ class Memory:
     def get_goals(self):
         return {
                 'state': self.states[:len(self)],
-                'image': self.to_numpy(self.obss[:len(self)]),
+                f'{self.space_info["obs_type"]}_obs': self.to_numpy(self.obss[:len(self)]),
         }
 
     def vis_sample(self, n=None, num_cols=10):
@@ -115,4 +115,6 @@ class GraphMemory(Memory):
         self.adj_matrix = memory.get('adj_matrix')
         self.dist = memory.get('dist')
         self.pred = memory.get('pred')
+        if self.dist is None:
+            self.compute_dist()
         return memory

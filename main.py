@@ -7,7 +7,9 @@ import sac
 import eval
 import utils
 
-from rnet import RNet
+import rnet.utils as rnet_utils
+
+from rnet.memory import RNetMemory
 from logger import Logger
 from replay_buffer import ReplayBuffer
 from exploration_buffer import ExplorationBuffer
@@ -25,13 +27,21 @@ def main(cfg):
 
     exploration_buffer = ExplorationBuffer(cfg.exploration_buffer, log)
 
-    rnet = RNet(cfg.rnet, space_info, device, exploration_buffer=None, log=log)
+    kwargs = dict(oracle=cfg.main.oracle_reward)
+    if not cfg.main.oracle_reward:
+        rnet_memory = RNetMemory(cfg.rnet.memory, space_info,
+                cfg.rnet.model.feat_size, device)
+        rnet_memory, NN = rnet_utils.load(cfg.rnet.load_from, rnet_memory)
 
-    replay_buffer = ReplayBuffer(cfg.replay_buffer, space_info, device, log)
+        kwargs["NN"] = NN
+        kwargs["graph_dist"] = rnet_memory.dist
+
+    replay_buffer = ReplayBuffer(cfg.replay_buffer, space_info, device)
 
     agent = sac.SAC(cfg.sac, space_info, device, log)
 
-    procs, buffers, barriers, n_eval_done, info_keys = eval.start_procs(cfg)
+    procs, buffers, barriers, n_eval_done, info_keys = eval.start_procs(cfg,
+            space_info)
 
     num_updates = 0
     for epoch in range(cfg.optim.num_epochs):
@@ -46,7 +56,8 @@ def main(cfg):
 
         ## TRAIN
         replay_buffer.flush()
-        replay_buffer.fill_unsup(exploration_buffer, rnet.memory.graph_dist)
+        rnet_utils.fill_replay_buffer(replay_buffer, exploration_buffer,
+                **kwargs)
 
         train_stats = agent.train_one_epoch(replay_buffer)
         log.info("train " + ' - '.join([f"{k}: {v:.2f}" for k, v in

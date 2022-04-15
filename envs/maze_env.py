@@ -15,8 +15,8 @@ import envs.maze_utils as utils
 from envs.base_wrapper import BaseWrapper
 
 class MazeWrapper(BaseWrapper):
-    def __init__(self, env, cfg):
-        super().__init__(env, cfg)
+    def __init__(self, env, cfg, space_info):
+        super().__init__(env, cfg, space_info)
         if self.cfg.obs.type == 'rgb':
             from mujoco_py import MjRenderContextOffscreen as MjRCO
             self.unwrapped._mj_offscreen_viewer = MjRCO(self.wrapped_env.sim)
@@ -24,13 +24,6 @@ class MazeWrapper(BaseWrapper):
         xmin, xmax, ymin, ymax = self.unwrapped._xy_limits()
         self.xlim = (xmin, xmax)
         self.ylim = (ymin, ymax)
-
-    def init_observation_space(self):
-        self.observation_space = gym.spaces.dict.Dict({
-            'state': self.observation_space,
-            'image': gym.spaces.box.Box(0, 255, (3,
-                *self.unwrapped._image_shape), dtype=np.uint8),
-        })
 
     def process_info(self, info, metrics):
         super().process_info(info, metrics)
@@ -111,10 +104,7 @@ class MazeWrapper(BaseWrapper):
         return True
 
     def generate_random_ori(self):
-        ORI_IND = self.wrapped_env.ORI_IND
-        orimin, orimax = (self.observation_space['state'].low[ORI_IND],
-                self.observation_space['state'].high[ORI_IND])
-        return np.random.uniform(orimin, orimax)
+        return np.random.uniform(-np.pi, np.pi)
 
     def set_random_pos(self):
         x, y = self.generate_random_point()
@@ -337,7 +327,7 @@ IMG_SIZE = {
         'U4rooms': 128,
 }
 
-def make_maze_env(env_cfg):
+def make_maze_env(env_cfg, space_info):
     env_name = env_cfg.id[5:]
     assert env_name in ENV_CLS, f"invalid env_id {env_name}"
     zoom = ZOOM_PARAMS[env_name]
@@ -351,5 +341,5 @@ def make_maze_env(env_cfg):
             camera_zoom=zoom,
     )
     env = TimeLimit(env, max_episode_steps=env_cfg.max_episode_steps)
-    env = MazeWrapper(env, env_cfg)
+    env = MazeWrapper(env, env_cfg, space_info)
     return env

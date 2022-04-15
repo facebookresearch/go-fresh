@@ -46,7 +46,10 @@ class ExplorationBuffer(object):
         ep_files = [os.path.join(data_dir, f) for f in os.listdir(data_dir)]
         x_list = self.parallel_read(ep_files, num_procs=self.cfg.num_procs)
         self.obss = x_list["observation"]
-        self.states = x_list["physics"]
+        if "physics" in x_list:
+            self.states = x_list["physics"]
+        else:
+            self.states = x_list["observation"]
         self.actions = x_list["action"]
         self.traj_len = self.obss.shape[1]
 
