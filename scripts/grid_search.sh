@@ -1,7 +1,7 @@
 #!/bin/bash
 
 python main.py \
-    +env=maze_U4rooms \
+    +env=walker \
     main.suffix="oracle\${main.oracle_reward}-rs\${replay_buffer.reward_scaling}-lr\${sac.optim.lr}-bs\${sac.optim.batch_size}-alpha\${sac.optim.entropy.alpha}-gamma\${sac.optim.gamma}-grid_search" \
     main.oracle_reward=True,False \
     replay_buffer.reward_scaling=0.01,0.1,0.001 \
