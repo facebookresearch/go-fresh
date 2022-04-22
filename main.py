@@ -27,7 +27,7 @@ def main(cfg):
 
     exploration_buffer = ExplorationBuffer(cfg.exploration_buffer, log)
 
-    kwargs = dict(oracle=cfg.main.oracle_reward)
+    kwargs = {}
     if not cfg.main.oracle_reward:
         rnet_memory = RNetMemory(cfg.rnet.memory, space_info,
                 cfg.rnet.model.feat_size, device)
@@ -56,7 +56,7 @@ def main(cfg):
 
         ## TRAIN
         replay_buffer.flush()
-        rnet_utils.fill_replay_buffer(replay_buffer, exploration_buffer,
+        rnet_utils.fill_replay_buffer(replay_buffer, exploration_buffer, cfg,
                 **kwargs)
 
         train_stats = agent.train_one_epoch(replay_buffer)

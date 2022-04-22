@@ -7,6 +7,7 @@ env:
     obs_type: vec
     success_thresh: 0.7
     max_episode_steps: 1000
+    action_repeat: 2
     obs:
         type: vec
         state_size: 18

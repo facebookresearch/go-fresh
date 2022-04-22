@@ -34,7 +34,7 @@ def run(agent, num_episodes, buffers, barriers, n_eval_done, info_keys):
         den = n_eval_done.value
         if 'room' in x or 'goal' in x:
             key = 'room' if 'room' in x else 'goal'
-            den = eval_stat[f"count-{key}{x[x.find(key) + 4]}"]
+            den = eval_stat[f"count-{key}{x[x.find(key) + 4:]}"]
             if 'count' in x:
                 den = 1
         if den == 0:
@@ -48,7 +48,9 @@ def worker_eval(cfg, space_info, i, buffers, barriers, n_eval_done):
     env = envs.make_env(cfg.env, space_info, seed=i)
     for epoch in range(cfg.optim.num_epochs):
         barriers["sta"].wait()
-        obs = env.reset()
+        goal_idx = (cfg.eval.goal_idx if cfg.train.goal_strat == 'one_goal'
+                else None)
+        obs = env.reset(goal_idx=goal_idx)
         num_steps = 0
         while n_eval_done.value < cfg.eval.num_episodes:
             buffers["obs"][i, 0] = torch.from_numpy(obs['obs'])
@@ -56,13 +58,13 @@ def worker_eval(cfg, space_info, i, buffers, barriers, n_eval_done):
             barriers["obs"].wait()
             barriers["act"].wait()
             obs, _, _, info = env.step(buffers["act"][i])
-            num_steps += 1
+            num_steps += cfg.env.action_repeat
             if num_steps >= env._max_episode_steps:
                 for k, v in info.items():
                     buffers[k][i] = v
                 with n_eval_done.get_lock():
                     n_eval_done.value += 1
-                obs = env.reset()
+                obs = env.reset(goal_idx=goal_idx)
                 num_steps = 0
             else:
                 for k in info:

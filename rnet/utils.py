@@ -8,6 +8,8 @@ from tqdm import tqdm
 from rnet.memory import RNetMemory
 from envs.maze_utils import oracle_distance
 
+walker_goals = {8: (8291, 414), 10: (7080, 198)}
+
 def train(cfg, model, dataset, device):
     criterion = torch.nn.BCEWithLogitsLoss()
     optim = torch.optim.Adam(model.parameters(), lr=cfg.lr,
@@ -107,16 +109,20 @@ def compute_NN(exploration_buffer, model, memory, device):
 def oracle_reward(x1, x2):
     return - oracle_distance(x1, x2)
 
-def fill_replay_buffer(replay_buffer, exploration_buffer, oracle=False,
-        NN=None, graph_dist=None):
+def fill_replay_buffer(replay_buffer, exploration_buffer, cfg, NN=None,
+        graph_dist=None):
     print("filling replay buffer")
     while not replay_buffer.is_full():
-        g_obs, g1, g2 = exploration_buffer.get_random_obs()
+        if cfg.train.goal_strat == 'rb':
+            g_obs, g1, g2 = exploration_buffer.get_random_obs()
+        elif cfg.train.goal_strat == 'one_goal':
+            g1, g2 = walker_goals[cfg.eval.goal_idx]
+            g_obs = exploration_buffer.get_obs(g1, g2)
         s_obs, s1, s2 = exploration_buffer.get_random_obs()
         state = {'obs': s_obs, 'goal_obs': g_obs}
         next_state = {'obs': exploration_buffer.obss[s1][s2 + 1], 'goal_obs':
                 g_obs}
-        if oracle:
+        if cfg.main.oracle_reward:
             reward = oracle_reward(exploration_buffer.states[s1][s2 + 1],
                     exploration_buffer.states[g1][g2])
         else:

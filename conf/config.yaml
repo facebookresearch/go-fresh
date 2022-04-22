@@ -4,6 +4,7 @@ main:
     logs_dir: /checkpoint/${env:USER}/offline-gcrl/logs/${main.name}
     save_interval: 100
     oracle_reward: false
+    run: #dummy variable for several runs
 
 env:
     id: maze_U4rooms
@@ -29,9 +30,13 @@ replay_buffer:
 optim:
     num_epochs: 1001
 
+train:
+    goal_strat: rb #goal sampling strategy: rb or one_goal
+
 eval:
     num_episodes: 500
     num_procs: 10
+    goal_idx:
 
 sac:
     policy:

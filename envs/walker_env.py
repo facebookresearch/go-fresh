@@ -59,7 +59,7 @@ class WalkerWrapper(BaseWrapper):
         self.info_keys += to_add
 
 def make_walker_env(env_cfg, space_info):
-    env = dmc2gym.make("walker", "walk")
+    env = dmc2gym.make("walker", "walk", frame_skip=env_cfg.action_repeat)
     env = TimeLimit(env, max_episode_steps=env_cfg.max_episode_steps)
     env = WalkerWrapper(env, env_cfg, space_info)
     return env
