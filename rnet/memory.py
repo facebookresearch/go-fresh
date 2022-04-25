@@ -8,7 +8,6 @@ from memory import GraphMemory
 class RNetMemory(GraphMemory):
     def __init__(self, cfg, space_info, feat_size, device):
         super().__init__(cfg, space_info)
-        self.cfg = cfg
         self.device = device
         obs_dtype = utils.TORCH_DTYPE[space_info['type']['obs']]
         self.obss = torch.zeros((cfg.capacity, *space_info['shape']['obs']),
@@ -65,7 +64,7 @@ class RNetMemory(GraphMemory):
     def connect_graph(self, rnet_model):
         while True:
             n_components, labels = csg.connected_components(self.adj_matrix,
-                    directed=False, return_labels=True)
+                    directed=self.cfg.directed, return_labels=True)
             print(f"number of connected components: {n_components}")
             if n_components == 1:
                 break

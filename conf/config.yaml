@@ -75,6 +75,7 @@ rnet:
     dataset:
         thresh: 10
         in_traj_ratio: 0.5
+        symmetric: true
         num_pairs:
             train: 500000
             val: 100000
@@ -89,6 +90,7 @@ rnet:
         capacity: 500
         skip: 1
         skip_traj: 0.05 #percentage of trajectories to skip
+        directed: false
 
 hydra:
     launcher:

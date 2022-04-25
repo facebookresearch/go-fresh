@@ -43,10 +43,13 @@ class RNetPairsDataset(torch.utils.data.Dataset):
             if self.get_break_condition(i1, i2, pos, in_traj):
                 break
 
+        if pos and not self.cfg.symmetric:
+            imin, imax = min(i1, i2), max(i1, i2)
+            return traj1[imin], traj1[imax], pos
         if random.random() > 0.5:
             return traj1[i1], traj2[i2], pos
-        else:
-            return traj2[i2], traj1[i1], pos
+        return traj2[i2], traj1[i1], pos
+
 
 class RNetPairsSplitDataset:
     def __init__(self, cfg, traj_buffer):
