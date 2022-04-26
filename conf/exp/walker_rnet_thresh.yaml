@@ -1,0 +1,15 @@
+# @package _global_
+defaults:
+    - /env/walker
+
+rnet:
+    dataset:
+        thresh: 10 
+        neg_thresh: 0 
+    model:
+        remove_velocity: False 
+    memory:
+        skip_traj: 0.01 
+        capacity: 1000 
+        directed: True 
+    load_from: /checkpoint/${env:USER}/offline-gcrl/rnet/walker_thresh${rnet.dataset.thresh}_neg${rnet.dataset.neg_thresh}

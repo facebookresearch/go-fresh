@@ -74,7 +74,7 @@ rnet:
         dims_to_keep:
     dataset:
         thresh: 10
-        neg_thresh: -1  # sample negative pairs within this distance
+        neg_thresh: 0  # sample negative pairs within this distance
         in_traj_ratio: 0.5
         symmetric: true
         num_pairs:
