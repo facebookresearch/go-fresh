@@ -10,7 +10,7 @@ from envs.maze_utils import oracle_distance
 
 walker_goals = {8: (8291, 414), 10: (7080, 198)}
 
-def train(cfg, model, dataset, device):
+def train(cfg, model, dataset, device, tb_log=None):
     criterion = torch.nn.BCEWithLogitsLoss()
     optim = torch.optim.Adam(model.parameters(), lr=cfg.lr,
             weight_decay=cfg.weight_decay)
@@ -50,7 +50,7 @@ def train(cfg, model, dataset, device):
 
                 stats[epoch][phase]['num_pairs'] += labels.shape[0]
                 stats[epoch][phase]['rnet_loss'] += loss.item() * labels.shape[0]
-                stats[epoch][phase]['rnet_acc'] += torch.sum(preds == labels.data)
+                stats[epoch][phase]['rnet_acc'] += torch.sum(preds == labels.data).item()
 
             for k in stats[epoch][phase]:
                 if k == 'num_pairs':
@@ -59,6 +59,9 @@ def train(cfg, model, dataset, device):
             to_print += " - {} loss {:.2f},  acc {:.2f}".format(phase,
                 stats[epoch][phase]['rnet_loss'], stats[epoch][phase]['rnet_acc'])
         print(to_print)
+        if tb_log is not None:
+            tb_log.add_stats(stats[epoch]["train"], epoch, 'rnet/train')
+            tb_log.add_stats(stats[epoch]["val"], epoch, 'rnet/val')
     model.eval()
     return stats
 

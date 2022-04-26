@@ -15,12 +15,14 @@ from rnet.memory import RNetMemory
 from rnet.dataset import RNetPairsSplitDataset
 from exploration_buffer import ExplorationBuffer
 from rnet.utils import train, build_memory, save, compute_NN
+from logger import Logger
 
 
 @hydra.main(config_path="conf", config_name="config.yaml")
 def main(cfg):
     log = logging.getLogger(__name__)
     log.info(cfg)
+    tb_log = Logger(cfg.main.logs_dir, cfg)
 
     space_info = utils.get_space_info(cfg.env.obs, cfg.env.action_dim)
     device = torch.device("cuda")
@@ -32,7 +34,7 @@ def main(cfg):
     log.info(model)
     model = model.to(device)
 
-    stats = train(cfg.rnet.train, model, dataset, device)
+    stats = train(cfg.rnet.train, model, dataset, device, tb_log)
 
     model.eval()
     memory = RNetMemory(cfg.rnet.memory, space_info, model.feat_size, device)
