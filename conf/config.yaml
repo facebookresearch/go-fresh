@@ -77,9 +77,10 @@ rnet:
         neg_thresh: 0  # sample negative pairs within this distance
         in_traj_ratio: 0.5
         symmetric: true
+        valid_ratio: 0.05  # ratio of data to be used as validation
         num_pairs:
-            train: 500000
-            val: 100000
+            train: 500000  # not the actual data size
+            val: 100000  # not the actual data size
     train:
         lr: 0.001
         num_epochs: 10

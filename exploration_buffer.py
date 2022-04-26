@@ -38,12 +38,13 @@ class ExplorationBuffer(object):
                 data["image"] = np.stack(data["image"])
                 print(data["image"].shape)
                 print(data["image"].dtype)
-                sdkfjh
             np.save(path, data)
     
     def load_data(self, data_dir):
         self.print_fn("loading exploration buffer")
         ep_files = [os.path.join(data_dir, f) for f in os.listdir(data_dir)]
+        # exclude hidden files
+        ep_files = [f for f in ep_files if not os.path.basename(f).startswith('.')]
         x_list = self.parallel_read(ep_files, num_procs=self.cfg.num_procs)
         self.obss = x_list["observation"]
         if "physics" in x_list:
@@ -61,8 +62,11 @@ class ExplorationBuffer(object):
         step = np.random.randint(self.traj_len - 1)
         return self.obss[traj_idx][step], traj_idx, step
 
-    def sample(self):
-        i = random.randint(0, len(self) - 1)
+    def sample(self, range=None):
+        if range is None:
+            i = random.randint(0, len(self) - 1)
+        else:
+            i = random.randint(range[0], range[1] - 1)
         return self.get_traj(i)
 
     def get_traj(self, traj_idx):
