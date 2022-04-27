@@ -31,11 +31,17 @@ class RNetMemory(GraphMemory):
             self.embs[:len(self)] = rnet_model.get_embedding(
                 self.obss[:len(self)].float())
 
-    def compare_embeddings(self, emb, rnet_model):
+    def compare_embeddings(self, emb, rnet_model, reverse_dir=False):
         assert not rnet_model.training
         emb_batch = emb.repeat(len(self), 1)
         with torch.no_grad():
-            return rnet_model.compare_embeddings(emb_batch,
+            if reverse_dir:
+                return rnet_model.compare_embeddings(
+                    self.embs[:len(self)],
+                    emb_batch, batchwise=True)[:, 0]
+            else:
+                return rnet_model.compare_embeddings(
+                    emb_batch,
                     self.embs[:len(self)], batchwise=True)[:, 0]
 
     def compute_novelty(self, rnet_model, x):
@@ -44,6 +50,11 @@ class RNetMemory(GraphMemory):
         with torch.no_grad():
             e = rnet_model.get_embedding(x.float())
         rnet_values = self.compare_embeddings(e, rnet_model)
+        if self.cfg.directed:
+            # both directions need to be novel
+            rnet_values_reverse = self.compare_embeddings(e, rnet_model, reverse_dir=True)
+            rnet_values = torch.cat([rnet_values, rnet_values_reverse])
+            # TODO: which direction should we use for the nearest neighbor?
         argmax = torch.argmax(rnet_values).item()
         return e, - (rnet_values[argmax] - self.cfg.thresh).item(), argmax
 
