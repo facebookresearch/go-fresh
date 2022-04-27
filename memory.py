@@ -91,8 +91,8 @@ class GraphMemory(Memory):
     def add_edge(self, i, j):
         if not i == -1 and not j == -1:
             self.adj_matrix[i, j] = True
-        if not self.cfg.directed:
-            self.adj_matrix[j, i] = True
+            if not self.cfg.directed:
+                self.adj_matrix[j, i] = True
 
     def flush(self):
         super().flush()
