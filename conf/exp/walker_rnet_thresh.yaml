@@ -6,6 +6,7 @@ rnet:
     dataset:
         thresh: 10 
         neg_thresh: 0 
+        symmetric: False
     model:
         remove_velocity: False 
     memory:

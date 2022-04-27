@@ -1,3 +1,4 @@
+from turtle import get_poly
 import torch
 import random
 
@@ -9,22 +10,30 @@ class RNetPairsDataset(torch.utils.data.Dataset):
         self.traj_len = self.traj_buffer.traj_len
         self.traj_range = traj_range
 
+    def get_pos_interval(self, i1):
+        if self.cfg.symmetric:
+            low = max(0, i1 - self.cfg.thresh)
+        else:
+            low = i1
+        high = min(i1 + self.cfg.thresh, self.traj_len - 1)
+        assert (0 < low) or (high < self.traj_len - 1), "negative sample might not exist!"
+        return low, high
+
     def get_break_condition(self, i1, i2, pos, in_traj):
         if pos:
             return True
         else:
             if in_traj:
-                return abs(i1 - i2) > self.cfg.thresh
+                low, high = self.get_pos_interval(i1)
+                return not (low <= i2 <= high)
             else:
                 return True
 
     def get_search_interval(self, i1, pos, in_traj):
-        assert 2 * self.cfg.thresh < self.traj_len - 1, "negative sample might not exist!"
         low = 0
         high = self.traj_len - 1
         if pos:
-            low = max(low, i1 - self.cfg.thresh)
-            high = min(i1 + self.cfg.thresh, high)
+            low, high = self.get_pos_interval(i1)
         elif in_traj and self.cfg.neg_thresh > 0:
             low = max(low, i1 - self.cfg.neg_thresh)
             high = min(i1 + self.cfg.neg_thresh, high)
@@ -47,12 +56,10 @@ class RNetPairsDataset(torch.utils.data.Dataset):
             if self.get_break_condition(i1, i2, pos, in_traj):
                 break
 
-        if pos and not self.cfg.symmetric:
-            imin, imax = min(i1, i2), max(i1, i2)
-            return traj1[imin], traj1[imax], pos
-        if random.random() > 0.5:
+        if self.cfg.symmetric and random.random() > 0.5:
+            return traj2[i2], traj1[i1], pos
+        else:
             return traj1[i1], traj2[i2], pos
-        return traj2[i2], traj1[i1], pos
 
 
 class RNetPairsSplitDataset:
