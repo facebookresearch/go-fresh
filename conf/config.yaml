@@ -69,7 +69,8 @@ rnet:
         feat_size: 16
         hidden_size: 64
         comparator: net
-        n_layers: 3
+        n_layers: 3  # of the feature encoder
+        comp_n_layers: 2  # of the net comparator
         remove_velocity: true #remove velocity for maze
         dims_to_keep:
     dataset:

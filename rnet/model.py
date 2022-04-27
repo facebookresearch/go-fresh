@@ -59,12 +59,19 @@ class RNetModel(nn.Module):
         self.comparator_type = cfg.comparator
         self.bias = nn.Parameter(torch.zeros(1))
         if self.comparator_type == "net":
-            self.comparator = nn.Sequential(
+            modules = [
                 nn.Linear(2 * cfg.feat_size, cfg.feat_size),
                 nn.BatchNorm1d(num_features=cfg.feat_size),
                 nn.ReLU(),
-                nn.Linear(cfg.feat_size, 2),
-            )
+            ]
+            for _ in range(1, cfg.comp_n_layers - 1):
+                modules.extend([
+                    nn.Linear(cfg.feat_size, cfg.feat_size),
+                    nn.BatchNorm1d(num_features=cfg.feat_size),
+                    nn.ReLU(),
+                ])
+            modules.append(nn.Linear(cfg.feat_size, 2))
+            self.comparator = nn.Sequential(*modules)
         elif self.comparator_type == "net_sym":
             self.lin = nn.Linear(cfg.feat_size, cfg.feat_size)
             self.comparator = nn.Sequential(
