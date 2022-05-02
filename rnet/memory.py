@@ -50,13 +50,16 @@ class RNetMemory(GraphMemory):
         with torch.no_grad():
             e = rnet_model.get_embedding(x.float())
         rnet_values = self.compare_embeddings(e, rnet_model)
+        NNo = torch.argmax(rnet_values).item()
         if self.cfg.directed:
             # both directions need to be novel
-            rnet_values_reverse = self.compare_embeddings(e, rnet_model, reverse_dir=True)
-            rnet_values = torch.cat([rnet_values, rnet_values_reverse])
-            # TODO: which direction should we use for the nearest neighbor?
-        argmax = torch.argmax(rnet_values).item()
-        return e, - (rnet_values[argmax] - self.cfg.thresh).item(), argmax
+            rnet_values_reverse = self.compare_embeddings(e, rnet_model,
+                    reverse_dir=True)
+            NNi = torch.argmax(rnet_values_reverse).item()
+            nov = - (min(rnet_values[NNo], rnet_values_reverse[NNi]) -
+                    self.cfg.thresh).item()
+            return e, nov, NNi, NNo
+        return e, - (rnet_values[NNo] - self.cfg.thresh).item(), NNo, NNo
 
     def compute_rnet_values(self, rnet_model):
         rnet_values = np.zeros((len(self), len(self)))

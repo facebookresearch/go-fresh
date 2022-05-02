@@ -75,15 +75,18 @@ def build_memory(cfg, space_info, model, exploration_buffer, device):
     for traj_idx in tqdm(range(len(exploration_buffer)), desc="Updating Memory"):
         if random.random() > cfg.skip_traj:
             continue
-        prev_NN = -1
+        prev_NNi = -1
+        prev_NNo = -1
         traj = exploration_buffer.get_traj(traj_idx)
         for i in range(0, exploration_buffer.traj_len, cfg.skip):
             x = torch.from_numpy(traj['obs'][i]).to(device)
-            e, novelty, NN = memory.compute_novelty(model, x)
+            e, novelty, NNi, NNo = memory.compute_novelty(model, x)
             if novelty > 0:
                 NN = memory.add(x, traj['state'][i], e)
-            memory.add_edge(NN, prev_NN)
-            prev_NN = NN
+                NNi, NNo = NN, NN
+            memory.add_edge(prev_NNi, prev_NNo, NNi, NNo)
+            prev_NNi = NNi
+            prev_NNo = NNo
 
     memory.adj_matrix = memory.adj_matrix[:len(memory), :len(memory)]
     memory.compute_dist()
