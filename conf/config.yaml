@@ -1,7 +1,7 @@
 main:
     name: ${now:%Y%m%d-%H%M%S}_${env.id}_${main.suffix}
     suffix:
-    logs_dir: /checkpoint/${env:USER}/offline-gcrl/logs/${main.name}
+    logs_dir: /checkpoint/${env:USER}/offline-gcrl/logs/${main.name}  # store all model files
     save_interval: 100
     oracle_reward: false
     run: #dummy variable for several runs
@@ -64,7 +64,6 @@ sac:
             lr: ${sac.optim.lr}  #use different LR for the policy
 
 rnet:
-    load_from:
     model:
         feat_size: 16
         hidden_size: 64
