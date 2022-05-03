@@ -88,11 +88,20 @@ class GraphMemory(Memory):
         self.adj_matrix[:, i] = False
         return i
 
-    def add_edge(self, i, j):
-        if not i == -1 and not j == -1:
+    def add_edge(self, prev_NNi, prev_NNo, NNi, NNo):
+        if not self.cfg.directed:
+            assert prev_NNi == prev_NNo
+            assert NNi == NNo
+            self.add_single_edge(prev_NNi, NNi)
+            self.add_single_edge(NNi, prev_NNi)
+            return
+        self.add_single_edge(prev_NNi, prev_NNo)
+        self.add_single_edge(NNi, NNo)
+        self.add_single_edge(prev_NNi, NNo)
+
+    def add_single_edge(self, i, j):
+        if not i == -1 and not j == -1 and not i == j:
             self.adj_matrix[i, j] = True
-            if not self.cfg.directed:
-                self.adj_matrix[j, i] = True
 
     def flush(self):
         super().flush()

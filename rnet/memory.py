@@ -31,11 +31,17 @@ class RNetMemory(GraphMemory):
             self.embs[:len(self)] = rnet_model.get_embedding(
                 self.obss[:len(self)].float())
 
-    def compare_embeddings(self, emb, rnet_model):
+    def compare_embeddings(self, emb, rnet_model, reverse_dir=False):
         assert not rnet_model.training
         emb_batch = emb.repeat(len(self), 1)
         with torch.no_grad():
-            return rnet_model.compare_embeddings(emb_batch,
+            if reverse_dir:
+                return rnet_model.compare_embeddings(
+                    self.embs[:len(self)],
+                    emb_batch, batchwise=True)[:, 0]
+            else:
+                return rnet_model.compare_embeddings(
+                    emb_batch,
                     self.embs[:len(self)], batchwise=True)[:, 0]
 
     def compute_novelty(self, rnet_model, x):
@@ -44,8 +50,16 @@ class RNetMemory(GraphMemory):
         with torch.no_grad():
             e = rnet_model.get_embedding(x.float())
         rnet_values = self.compare_embeddings(e, rnet_model)
-        argmax = torch.argmax(rnet_values).item()
-        return e, - (rnet_values[argmax] - self.cfg.thresh).item(), argmax
+        NNo = torch.argmax(rnet_values).item()
+        if self.cfg.directed:
+            # both directions need to be novel
+            rnet_values_reverse = self.compare_embeddings(e, rnet_model,
+                    reverse_dir=True)
+            NNi = torch.argmax(rnet_values_reverse).item()
+            nov = - (max(rnet_values[NNo], rnet_values_reverse[NNi]) -
+                    self.cfg.thresh).item()
+            return e, nov, NNi, NNo
+        return e, - (rnet_values[NNo] - self.cfg.thresh).item(), NNo, NNo
 
     def compute_rnet_values(self, rnet_model):
         rnet_values = np.zeros((len(self), len(self)))
