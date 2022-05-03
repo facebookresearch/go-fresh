@@ -92,7 +92,7 @@ def build_memory(cfg, space_info, model, exploration_buffer, device):
     memory.compute_dist()
     return memory
 
-def compute_NN(exploration_buffer, model, memory, device):
+def embed_expl_buffer(exploration_buffer, model, device):
     model.eval()
     num_trajs, traj_len = len(exploration_buffer), exploration_buffer.traj_len
     embs = torch.zeros((num_trajs, traj_len, model.feat_size))
@@ -101,7 +101,10 @@ def compute_NN(exploration_buffer, model, memory, device):
         traj = torch.from_numpy(traj).float().to(device)
         with torch.no_grad():
             embs[traj_idx] = model.get_embedding(traj)
+    return embs
 
+def compute_NN(exploration_buffer, model, memory, device):
+    embs = embed_expl_buffer(exploration_buffer, model, device)
     memory.embs = memory.embs.to(device)
     NN = np.zeros((num_trajs, traj_len), dtype=int)
     skip = memory.cfg.skip
