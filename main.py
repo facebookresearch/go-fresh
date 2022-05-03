@@ -1,4 +1,3 @@
-import os
 import torch
 import hydra
 import logging
@@ -20,7 +19,7 @@ def main(cfg):
     log = logging.getLogger(__name__)
     tb_log = Logger(cfg.main.logs_dir, cfg)
 
-    log.info(f'exp name: {cfg.main.name}')
+    log.info(f"exp name: {cfg.main.name}")
 
     device = torch.device("cuda:0")
     space_info = utils.get_space_info(cfg.env.obs, cfg.env.action_dim)
@@ -29,8 +28,9 @@ def main(cfg):
 
     kwargs = {}
     if not cfg.main.oracle_reward:
-        rnet_memory = RNetMemory(cfg.rnet.memory, space_info,
-                cfg.rnet.model.feat_size, device)
+        rnet_memory = RNetMemory(
+            cfg.rnet.memory, space_info, cfg.rnet.model.feat_size, device
+        )
         rnet_memory, NN = rnet_utils.load(cfg.rnet.load_from, rnet_memory)
 
         kwargs["NN"] = NN
@@ -40,31 +40,30 @@ def main(cfg):
 
     agent = sac.SAC(cfg.sac, space_info, device, log)
 
-    procs, buffers, barriers, n_eval_done, info_keys = eval.start_procs(cfg,
-            space_info)
+    procs, buffers, barriers, n_eval_done, info_keys = eval.start_procs(cfg, space_info)
 
     num_updates = 0
     for epoch in range(cfg.optim.num_epochs):
         log.info(f"epoch: {epoch}")
 
-        ## EVAL
-        eval_stats = eval.run(agent, cfg.eval.num_episodes, buffers, barriers,
-                n_eval_done, info_keys)
-        log.info("eval " + ' - '.join([f"{k}: {v:.2f}" for k, v in
-            eval_stats.items()]))
-        tb_log.add_stats(eval_stats, epoch, 'eval')
+        # EVAL
+        eval_stats = eval.run(
+            agent, cfg.eval.num_episodes, buffers, barriers, n_eval_done, info_keys
+        )
+        log.info("eval " + " - ".join([f"{k}: {v:.2f}" for k, v in eval_stats.items()]))
+        tb_log.add_stats(eval_stats, epoch, "eval")
 
-        ## TRAIN
+        # TRAIN
         replay_buffer.flush()
-        rnet_utils.fill_replay_buffer(replay_buffer, exploration_buffer, cfg,
-                **kwargs)
+        rnet_utils.fill_replay_buffer(replay_buffer, exploration_buffer, cfg, **kwargs)
 
         train_stats = agent.train_one_epoch(replay_buffer)
-        log.info("train " + ' - '.join([f"{k}: {v:.2f}" for k, v in
-            train_stats.items()]))
-        num_updates += train_stats['updates']
-        train_stats['updates'] = num_updates
-        tb_log.add_stats(train_stats, epoch, 'train')
+        log.info(
+            "train " + " - ".join([f"{k}: {v:.2f}" for k, v in train_stats.items()])
+        )
+        num_updates += train_stats["updates"]
+        train_stats["updates"] = num_updates
+        tb_log.add_stats(train_stats, epoch, "train")
 
         if epoch % cfg.main.save_interval == 0:
             agent.save_checkpoint(cfg.main.logs_dir, epoch)

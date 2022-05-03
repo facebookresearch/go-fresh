@@ -3,6 +3,7 @@ import random
 import numpy as np
 import multiprocessing as mp
 
+
 class ExplorationBuffer(object):
     def __init__(self, cfg, log=None):
         self.cfg = cfg
@@ -19,7 +20,7 @@ class ExplorationBuffer(object):
         traj_buffer = {}
         for x in x_list:
             for k, v in x.items():
-                if not k in traj_buffer:
+                if k not in traj_buffer:
                     traj_buffer[k] = []
                 traj_buffer[k].append(v)
         traj_buffer = {k: np.stack(v) for k, v in traj_buffer.items()}
@@ -32,19 +33,20 @@ class ExplorationBuffer(object):
                 state_traj = data["physics"]
                 data["image"] = []
                 for i in range(len(state_traj)):
+                    # TODO: fix this! state is not defined
                     env.unwrapped._env.physics.set_state(state)
                     env.unwrapped._env.physics.forward()
-                    data["image"].append(env.render(mode='rgb_array'))
+                    data["image"].append(env.render(mode="rgb_array"))
                 data["image"] = np.stack(data["image"])
                 print(data["image"].shape)
                 print(data["image"].dtype)
             np.save(path, data)
-    
+
     def load_data(self, data_dir):
         self.print_fn("loading exploration buffer")
         ep_files = [os.path.join(data_dir, f) for f in os.listdir(data_dir)]
         # exclude hidden files
-        ep_files = [f for f in ep_files if not os.path.basename(f).startswith('.')]
+        ep_files = [f for f in ep_files if not os.path.basename(f).startswith(".")]
         x_list = self.parallel_read(ep_files, num_procs=self.cfg.num_procs)
         self.obss = x_list["observation"]
         if "physics" in x_list:
@@ -71,16 +73,15 @@ class ExplorationBuffer(object):
 
     def get_traj(self, traj_idx):
         assert traj_idx < len(self), "invalid traj_idx"
-        return {'obs': self.obss[traj_idx],
-                'state': self.states[traj_idx]}
+        return {"obs": self.obss[traj_idx], "state": self.states[traj_idx]}
 
     def get_obs(self, traj_idx, obs_idx):
         assert obs_idx < self.traj_len, "invalid obs_idx"
-        return self.get_traj(traj_idx)['obs'][obs_idx]
+        return self.get_traj(traj_idx)["obs"][obs_idx]
 
     def get_state(self, traj_idx, state_idx):
         assert state_idx < self.traj_len, "invalid state_idx"
-        return self.get_traj(traj_idx)['state'][state_idx]
+        return self.get_traj(traj_idx)["state"][state_idx]
 
     def get_obss_array(self):
         return self.obss
