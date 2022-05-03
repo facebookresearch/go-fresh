@@ -7,7 +7,7 @@ LOG_SIG_MAX = 2
 LOG_SIG_MIN = -20
 epsilon = 1e-6
 
-#def weights_init_(m):
+# def weights_init_(m):
 #    """Custom weight init for Conv2D and Linear layers. -- Denis Version"""
 #    if isinstance(m, nn.Linear):
 #        nn.init.orthogonal_(m.weight.data)
@@ -21,10 +21,12 @@ epsilon = 1e-6
 #        gain = nn.init.calculate_gain('relu')
 #        nn.init.orthogonal_(m.weight.data[:, :, mid, mid], gain)
 
+
 def weights_init_(m):
     if isinstance(m, nn.Linear):
         torch.nn.init.xavier_uniform_(m.weight, gain=1)
         torch.nn.init.constant_(m.bias, 0)
+
 
 class ValueNetwork(nn.Module):
     def __init__(self, num_inputs, hidden_dim):
@@ -42,6 +44,7 @@ class ValueNetwork(nn.Module):
         x = self.linear3(x)
         return x
 
+
 class FCHead(nn.Module):
     def __init__(self, obs_shape, cfg):
         super(FCHead, self).__init__()
@@ -56,28 +59,29 @@ class FCHead(nn.Module):
     def forward(self, x):
         return self.net(x)
 
+
 class RNetPlusHead(nn.Module):
     def __init__(self, obs_shape, cfg):
         super(RNetPlusHead, self).__init__()
         self.normalize = cfg.normalize
         n, m = obs_shape[1], obs_shape[2]
-        d = lambda x: ((((x - 1)//2 - 1)//2 - 1)//2 - 1)//2
-        conv_outdim = d(m)*d(n)*64
+        d = lambda x: ((((x - 1) // 2 - 1) // 2 - 1) // 2 - 1) // 2
+        conv_outdim = d(m) * d(n) * 64
         modules = [
-                nn.Conv2d(3, 8, (2, 2)),
-                nn.ReLU(),
-                nn.MaxPool2d((2, 2)),
-                nn.Conv2d(8, 16, (2, 2)),
-                nn.ReLU(),
-                nn.MaxPool2d((2, 2)),
-                nn.Conv2d(16, 32, (2, 2)),
-                nn.ReLU(),
-                nn.MaxPool2d((2, 2)),
-                nn.Conv2d(32, 64, (2, 2)),
-                nn.ReLU(),
-                nn.MaxPool2d((2, 2)),
-                nn.Flatten(),
-                nn.Linear(conv_outdim, cfg.out_size),
+            nn.Conv2d(3, 8, (2, 2)),
+            nn.ReLU(),
+            nn.MaxPool2d((2, 2)),
+            nn.Conv2d(8, 16, (2, 2)),
+            nn.ReLU(),
+            nn.MaxPool2d((2, 2)),
+            nn.Conv2d(16, 32, (2, 2)),
+            nn.ReLU(),
+            nn.MaxPool2d((2, 2)),
+            nn.Conv2d(32, 64, (2, 2)),
+            nn.ReLU(),
+            nn.MaxPool2d((2, 2)),
+            nn.Flatten(),
+            nn.Linear(conv_outdim, cfg.out_size),
         ]
         self.net = nn.Sequential(*modules)
 
@@ -85,26 +89,27 @@ class RNetPlusHead(nn.Module):
         if self.normalize:
             state = state / 255
         return self.net(state)
+
 
 class RNetHead(nn.Module):
     def __init__(self, obs_shape, cfg):
         super(RNetHead, self).__init__()
         self.normalize = cfg.normalize
         n, m = obs_shape[1], obs_shape[2]
-        d = lambda x: (((x - 1)//2 - 1)//2 - 1)//2
-        conv_outdim = d(m)*d(n)*32
+        d = lambda x: (((x - 1) // 2 - 1) // 2 - 1) // 2
+        conv_outdim = d(m) * d(n) * 32
         modules = [
-                nn.Conv2d(3, 8, (2, 2)),
-                nn.ReLU(),
-                nn.MaxPool2d((2, 2)),
-                nn.Conv2d(8, 16, (2, 2)),
-                nn.ReLU(),
-                nn.MaxPool2d((2, 2)),
-                nn.Conv2d(16, 32, (2, 2)),
-                nn.ReLU(),
-                nn.MaxPool2d((2, 2)),
-                nn.Flatten(),
-                nn.Linear(conv_outdim, cfg.out_size),
+            nn.Conv2d(3, 8, (2, 2)),
+            nn.ReLU(),
+            nn.MaxPool2d((2, 2)),
+            nn.Conv2d(8, 16, (2, 2)),
+            nn.ReLU(),
+            nn.MaxPool2d((2, 2)),
+            nn.Conv2d(16, 32, (2, 2)),
+            nn.ReLU(),
+            nn.MaxPool2d((2, 2)),
+            nn.Flatten(),
+            nn.Linear(conv_outdim, cfg.out_size),
         ]
         self.net = nn.Sequential(*modules)
 
@@ -112,6 +117,7 @@ class RNetHead(nn.Module):
         if self.normalize:
             state = state / 255
         return self.net(state)
+
 
 class SkewFitHead(nn.Module):
     def __init__(self, obs_shape, cfg):
@@ -119,14 +125,14 @@ class SkewFitHead(nn.Module):
         self.normalize = cfg.normalize
         conv_outdim = {48: 576, 64: 1024}
         modules = [
-                nn.Conv2d(3, 16, (5, 5), stride=3),
-                nn.ReLU(),
-                nn.Conv2d(16, 32, (3, 3), stride=2),
-                nn.ReLU(),
-                nn.Conv2d(32, 64, (3, 3), stride=2),
-                nn.ReLU(),
-                nn.Flatten(),
-                nn.Linear(conv_outdim[obs_shape[1]], cfg.out_size),
+            nn.Conv2d(3, 16, (5, 5), stride=3),
+            nn.ReLU(),
+            nn.Conv2d(16, 32, (3, 3), stride=2),
+            nn.ReLU(),
+            nn.Conv2d(32, 64, (3, 3), stride=2),
+            nn.ReLU(),
+            nn.Flatten(),
+            nn.Linear(conv_outdim[obs_shape[1]], cfg.out_size),
         ]
         self.net = nn.Sequential(*modules)
 
@@ -135,8 +141,14 @@ class SkewFitHead(nn.Module):
             state = state / 255
         return self.net(state)
 
-_HEADS = {"skew_fit": SkewFitHead, "rnet": RNetHead, "rnet+": RNetPlusHead,
-        "fc": FCHead}
+
+_HEADS = {
+    "skew_fit": SkewFitHead,
+    "rnet": RNetHead,
+    "rnet+": RNetPlusHead,
+    "fc": FCHead,
+}
+
 
 class QNetwork(nn.Module):
     def __init__(self, obs_shape, num_actions, cfg):
@@ -193,8 +205,8 @@ class GaussianPolicy(nn.Module):
 
         self.apply(weights_init_)
 
-        self.action_scale = torch.tensor(1.)
-        self.action_bias = torch.tensor(0.)
+        self.action_scale = torch.tensor(1.0)
+        self.action_bias = torch.tensor(0.0)
 
     def forward(self, state):
         obs_feat = self.obs_head(state[:, 0])
@@ -246,8 +258,8 @@ class DeterministicPolicy(nn.Module):
 
         self.apply(weights_init_)
 
-        self.action_scale = 1.
-        self.action_bias = 0.
+        self.action_scale = 1.0
+        self.action_bias = 0.0
 
     def forward(self, state):
         obs_feat = self.obs_head(state[:, 0])
@@ -261,10 +273,10 @@ class DeterministicPolicy(nn.Module):
 
     def sample(self, state):
         mean = self.forward(state)
-        noise = self.noise.normal_(0., std=0.1)
+        noise = self.noise.normal_(0.0, std=0.1)
         noise = noise.clamp(-0.25, 0.25)
         action = mean + noise
-        return action, torch.tensor(0.), mean
+        return action, torch.tensor(0.0), mean
 
     def to(self, device):
         self.action_scale = self.action_scale.to(device)

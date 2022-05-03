@@ -4,12 +4,8 @@ from tqdm import tqdm
 
 import torch
 import hydra
-import numpy as np
 
-import envs
 import utils
-import envs.walker_utils as walker_utils
-
 from rnet.model import RNetModel
 from rnet.memory import RNetMemory
 from rnet.dataset import RNetPairsSplitDataset

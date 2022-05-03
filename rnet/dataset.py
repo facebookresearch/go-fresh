@@ -1,6 +1,6 @@
-from turtle import get_poly
 import torch
 import random
+
 
 class RNetPairsDataset(torch.utils.data.Dataset):
     def __init__(self, cfg, traj_buffer, num_pairs, traj_range):
@@ -16,7 +16,9 @@ class RNetPairsDataset(torch.utils.data.Dataset):
         else:
             low = i1
         high = min(i1 + self.cfg.thresh, self.traj_len - 1)
-        assert (0 < low) or (high < self.traj_len - 1), "negative sample might not exist!"
+        assert (0 < low) or (
+            high < self.traj_len - 1
+        ), "negative sample might not exist!"
         return low, high
 
     def get_break_condition(self, i1, i2, pos, in_traj):
@@ -44,11 +46,13 @@ class RNetPairsDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, i, enforce_neg=False):
         pos = 0 if enforce_neg else random.randint(0, 1)
-        traj1 = self.traj_buffer.sample(range=self.traj_range)['obs']
+        traj1 = self.traj_buffer.sample(range=self.traj_range)["obs"]
         i1 = random.randint(0, self.traj_len - 1)
 
         in_traj = pos or random.random() < self.cfg.in_traj_ratio
-        traj2 = traj1 if in_traj else self.traj_buffer.sample(range=self.traj_range)['obs']
+        traj2 = (
+            traj1 if in_traj else self.traj_buffer.sample(range=self.traj_range)["obs"]
+        )
 
         interval = self.get_search_interval(i1, pos, in_traj)
         while True:
@@ -69,5 +73,7 @@ class RNetPairsSplitDataset:
         N_train = N - N_val
         train_range = [0, N_train]
         val_range = [N_train, N]
-        self.train = RNetPairsDataset(cfg, traj_buffer, cfg.num_pairs.train, train_range)
+        self.train = RNetPairsDataset(
+            cfg, traj_buffer, cfg.num_pairs.train, train_range
+        )
         self.val = RNetPairsDataset(cfg, traj_buffer, cfg.num_pairs.val, val_range)

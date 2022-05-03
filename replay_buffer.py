@@ -3,30 +3,37 @@ import numpy as np
 
 import utils
 
+
 class ReplayBuffer(object):
     def __init__(self, cfg, space_info, device):
         self.cfg = cfg
 
         self.capacity = cfg.capacity
         self.device = device
-        obs_shape = space_info['shape']['obs']
-        obs_dtype = utils.TORCH_DTYPE[space_info['type']['obs']]
+        obs_shape = space_info["shape"]["obs"]
+        obs_dtype = utils.TORCH_DTYPE[space_info["type"]["obs"]]
         self.space_info = space_info
 
-        self.states = torch.empty((self.capacity, 2, *obs_shape),
-                dtype=obs_dtype, device=device)
-        self.next_states = torch.empty((self.capacity, 2, *obs_shape),
-                dtype=obs_dtype, device=device)
-        self.actions = torch.empty((self.capacity, space_info['action_dim']),
-                dtype=torch.float32, device=device)
-        self.rewards = torch.empty((self.capacity, 1), dtype=torch.float32,
-                device=device)
+        self.states = torch.empty(
+            (self.capacity, 2, *obs_shape), dtype=obs_dtype, device=device
+        )
+        self.next_states = torch.empty(
+            (self.capacity, 2, *obs_shape), dtype=obs_dtype, device=device
+        )
+        self.actions = torch.empty(
+            (self.capacity, space_info["action_dim"]),
+            dtype=torch.float32,
+            device=device,
+        )
+        self.rewards = torch.empty(
+            (self.capacity, 1), dtype=torch.float32, device=device
+        )
 
         self.idx = 0
         self.full = False
 
     def process_state(self, state):
-        return np.stack((state['obs'], state['goal_obs']))
+        return np.stack((state["obs"], state["goal_obs"]))
 
     def push(self, state, action, reward, next_state):
         proc_state = self.process_state(state)

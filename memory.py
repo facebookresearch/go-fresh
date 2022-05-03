@@ -3,14 +3,16 @@ import random
 import numpy as np
 import scipy.sparse.csgraph as csg
 
+
 class Memory:
     def __init__(self, cfg, space_info):
         self.cfg = cfg
         self.space_info = space_info
         self.size = 0
-        self.obss = np.zeros((cfg.capacity, *space_info['shape']['obs']),
-                dtype=space_info['type']['obs'])
-        self.states = np.zeros((cfg.capacity, *space_info['shape']['state']))
+        self.obss = np.zeros(
+            (cfg.capacity, *space_info["shape"]["obs"]), dtype=space_info["type"]["obs"]
+        )
+        self.states = np.zeros((cfg.capacity, *space_info["shape"]["state"]))
 
     def __len__(self):
         return self.size
@@ -40,29 +42,29 @@ class Memory:
 
     def get_goals(self):
         return {
-                'state': self.states[:len(self)],
-                f'{self.space_info["obs_type"]}_obs': self.to_numpy(self.obss[:len(self)]),
+            "state": self.states[: len(self)],
+            f'{self.space_info["obs_type"]}_obs': self.to_numpy(self.obss[: len(self)]),
         }
 
     def vis_sample(self, n=None, num_cols=10):
-        assert self.space_info['obs_type'] == 'rgb'
+        assert self.space_info["obs_type"] == "rgb"
         if not n:
             n = len(self)
         assert n <= len(self)
         num_rows = n // num_cols + int(n % num_cols != 0)
-        fig, ax = plt.subplots(num_rows, num_cols, figsize=(2 * num_cols, 2 *
-            num_rows))
+        # TODO: plt is not defined
+        fig, ax = plt.subplots(num_rows, num_cols, figsize=(2 * num_cols, 2 * num_rows))
         for i in range(n):
             img = self.to_numpy(self.obss[i]).transpose((1, 2, 0))
             ax[i // num_cols, i % num_cols].imshow(img)
-            ax[i // num_cols, i % num_cols].axis('off')
+            ax[i // num_cols, i % num_cols].axis("off")
             ax[i // num_cols, i % num_cols].set_title(str(i))
         return fig
 
     def dict_to_save(self):
         return {
-            'obss': self.to_numpy(self.obss[:len(self)]),
-            'states': self.states[:len(self)],
+            "obss": self.to_numpy(self.obss[: len(self)]),
+            "states": self.states[: len(self)],
         }
 
     def save(self, path):
@@ -71,11 +73,11 @@ class Memory:
 
     def load(self, path):
         memory = np.load(path, allow_pickle=True).tolist()
-        self.size = memory['obss'].shape[0]
-        self.obss[:len(self)] = self.from_numpy(memory['obss'],
-                self.obss[:len(self)])
-        self.states[:len(self)] = memory['states']
+        self.size = memory["obss"].shape[0]
+        self.obss[: len(self)] = self.from_numpy(memory["obss"], self.obss[: len(self)])
+        self.states[: len(self)] = memory["states"]
         return memory
+
 
 class GraphMemory(Memory):
     def __init__(self, cfg, space_info):
@@ -105,26 +107,25 @@ class GraphMemory(Memory):
 
     def flush(self):
         super().flush()
-        self.adj_matrix = np.zeros((cfg.capacity, cfg.capacity), dtype=bool)
+        self.adj_matrix = np.zeros((self.cfg.capacity, self.cfg.capacity), dtype=bool)
 
     def compute_dist(self):
-        self.dist, self.pred = csg.floyd_warshall(self.adj_matrix,
-                return_predecessors=True, directed=self.cfg.directed)
+        self.dist, self.pred = csg.floyd_warshall(
+            self.adj_matrix, return_predecessors=True, directed=self.cfg.directed
+        )
 
     def dict_to_save(self):
         to_save = super().dict_to_save()
-        to_save.update({
-            'adj_matrix': self.adj_matrix,
-            'dist': self.dist,
-            'pred': self.pred,
-        })
+        to_save.update(
+            {"adj_matrix": self.adj_matrix, "dist": self.dist, "pred": self.pred}
+        )
         return to_save
 
     def load(self, path):
         memory = super().load(path)
-        self.adj_matrix = memory.get('adj_matrix')
-        self.dist = memory.get('dist')
-        self.pred = memory.get('pred')
+        self.adj_matrix = memory.get("adj_matrix")
+        self.dist = memory.get("dist")
+        self.pred = memory.get("pred")
         if self.dist is None:
             self.compute_dist()
         return memory

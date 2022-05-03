@@ -5,51 +5,56 @@ import numpy as np
 
 from sklearn.decomposition import PCA
 
+
 class FeatureEncoder(nn.Module):
     def __init__(self, cfg, space_info):
         super(FeatureEncoder, self).__init__()
         self.cfg = cfg
-        self.obs_type = space_info['obs_type']
-        obs_shape = space_info['shape']['obs']
+        self.obs_type = space_info["obs_type"]
+        obs_shape = space_info["shape"]["obs"]
 
-        if space_info['obs_type'] == 'vec':
+        if space_info["obs_type"] == "vec":
             obs_size = obs_shape[0]
             if self.cfg.remove_velocity:
                 obs_size = self.cfg.dims_to_keep
-            modules = [nn.Linear(obs_size, cfg.hidden_size),
-                    nn.BatchNorm1d(num_features=cfg.hidden_size), nn.Tanh()]
+            modules = [
+                nn.Linear(obs_size, cfg.hidden_size),
+                nn.BatchNorm1d(num_features=cfg.hidden_size),
+                nn.Tanh(),
+            ]
             for _ in range(1, cfg.n_layers - 1):
                 modules.append(nn.Linear(cfg.hidden_size, cfg.hidden_size))
                 modules.append(nn.BatchNorm1d(num_features=cfg.hidden_size))
                 modules.append(nn.Tanh())
             modules.append(nn.Linear(cfg.hidden_size, cfg.feat_size))
 
-        elif space_info['obs_type'] == 'rgb':
+        elif space_info["obs_type"] == "rgb":
             n, m = obs_shape[1], obs_shape[2]
-            d = lambda x: (((x - 1)//2 - 1)//2 - 1)//2
-            conv_outdim = d(m)*d(n)*32
+            d = lambda x: (((x - 1) // 2 - 1) // 2 - 1) // 2
+            conv_outdim = d(m) * d(n) * 32
             modules = [
-                    nn.Conv2d(3, 8, (2, 2)),
-                    nn.ReLU(),
-                    nn.MaxPool2d((2, 2)),
-                    nn.Conv2d(8, 16, (2, 2)),
-                    nn.ReLU(),
-                    nn.MaxPool2d((2, 2)),
-                    nn.Conv2d(16, 32, (2, 2)),
-                    nn.ReLU(),
-                    nn.MaxPool2d((2, 2)),
-                    nn.Flatten(),
-                    nn.Linear(conv_outdim, cfg.feat_size),
+                nn.Conv2d(3, 8, (2, 2)),
+                nn.ReLU(),
+                nn.MaxPool2d((2, 2)),
+                nn.Conv2d(8, 16, (2, 2)),
+                nn.ReLU(),
+                nn.MaxPool2d((2, 2)),
+                nn.Conv2d(16, 32, (2, 2)),
+                nn.ReLU(),
+                nn.MaxPool2d((2, 2)),
+                nn.Flatten(),
+                nn.Linear(conv_outdim, cfg.feat_size),
             ]
 
         self.net = nn.Sequential(*modules)
 
     def forward(self, x):
         if self.obs_type == "rgb":
-            x = x / 255.
+            x = x / 255.0
         if self.cfg.remove_velocity:
-            x = x[:, :self.cfg.dims_to_keep]
+            x = x[:, : self.cfg.dims_to_keep]
         return self.net(x)
+
 
 class RNetModel(nn.Module):
     def __init__(self, cfg, space_info):
@@ -65,11 +70,13 @@ class RNetModel(nn.Module):
                 nn.ReLU(),
             ]
             for _ in range(1, cfg.comp_n_layers - 1):
-                modules.extend([
-                    nn.Linear(cfg.feat_size, cfg.feat_size),
-                    nn.BatchNorm1d(num_features=cfg.feat_size),
-                    nn.ReLU(),
-                ])
+                modules.extend(
+                    [
+                        nn.Linear(cfg.feat_size, cfg.feat_size),
+                        nn.BatchNorm1d(num_features=cfg.feat_size),
+                        nn.ReLU(),
+                    ]
+                )
             modules.append(nn.Linear(cfg.feat_size, 2))
             self.comparator = nn.Sequential(*modules)
         elif self.comparator_type == "net_sym":
@@ -86,8 +93,7 @@ class RNetModel(nn.Module):
     def forward(self, x1, x2=None, batchwise=False):
         e1 = self.encoder(x1)
         if x2 is None:
-            return self.compare_embeddings(e1, e1, equal=True,
-                    batchwise=batchwise)
+            return self.compare_embeddings(e1, e1, equal=True, batchwise=batchwise)
         e2 = self.encoder(x2)
         return self.compare_embeddings(e1, e2, batchwise=batchwise)
 
@@ -101,17 +107,17 @@ class RNetModel(nn.Module):
         self.load_state_dict(torch.load(path))
 
     def pairwise_distances(self, x, y=None):
-        '''
+        """
         Input: x is a Nxd matrix
                y is an optional Mxd matirx
         Output: dist is a NxM matrix where dist[i,j] is the square norm between x[i,:] and y[j,:]
                 if y is not given then use 'y=x'.
         i.e. dist[i,j] = ||x[i,:]-y[j,:]||^2
-        '''
-        x_norm = (x**2).sum(1).view(-1, 1)
+        """
+        x_norm = (x ** 2).sum(1).view(-1, 1)
         if y is not None:
             y_t = torch.transpose(y, 0, 1)
-            y_norm = (y**2).sum(1).view(1, -1)
+            y_norm = (y ** 2).sum(1).view(1, -1)
         else:
             y_t = torch.transpose(x, 0, 1)
             y_norm = x_norm.view(1, -1)
@@ -119,44 +125,42 @@ class RNetModel(nn.Module):
         return torch.clamp(dist, 0.0, np.inf)
 
     def compare_embeddings(self, e1, e2, equal=False, batchwise=False):
-        if self.comparator_type == 'dot':
+        if self.comparator_type == "dot":
             if batchwise:
-                logits = torch.bmm(e1.unsqueeze(1),
-                        e2.unsqueeze(2))[:, :, 0]
+                logits = torch.bmm(e1.unsqueeze(1), e2.unsqueeze(2))[:, :, 0]
             else:
                 logits = torch.matmul(e1, e2.T)
             return logits - self.bias
 
-        elif self.comparator_type == 'cosine':
+        elif self.comparator_type == "cosine":
             if batchwise:
                 return (F.cosine_similarity(e1, e2)).unsqueeze(1) - self.bias
             else:
                 raise NotImplementedError
 
-        elif self.comparator_type == 'dot-W':
+        elif self.comparator_type == "dot-W":
             proj2 = torch.matmul(self.W, e2.T)
             if batchwise:
-                logits = torch.bmm(e1.unsqueeze(1),
-                        proj2.T.unsqueeze(2))[:, :, 0]
+                logits = torch.bmm(e1.unsqueeze(1), proj2.T.unsqueeze(2))[:, :, 0]
             else:
-                    logits = torch.matmul(e1, proj2)
+                logits = torch.matmul(e1, proj2)
             return logits - self.bias
 
-        elif self.comparator_type == 'L2':
+        elif self.comparator_type == "L2":
             if batchwise:
                 raise NotImplementedError
             if equal:
                 e2 = None
             return self.pairwise_distances(e1, e2)
 
-        elif self.comparator_type == 'net':
+        elif self.comparator_type == "net":
             if batchwise:
                 x = torch.cat((e1, e2), 1)
                 return self.comparator(x) - self.bias
             else:
                 raise NotImplementedError
 
-        elif self.comparator_type == 'net_sym':
+        elif self.comparator_type == "net_sym":
             if batchwise:
                 x1 = self.lin(e1)
                 x2 = self.lin(e2)
@@ -178,6 +182,7 @@ class RNetModel(nn.Module):
         with torch.no_grad():
             comp_obs = torch.from_numpy(comp_obs).float()
             obss = torch.from_numpy(obss).float()
-            rnet_values = self(comp_obs.repeat(obss.size(0), 1), obss,
-                    batchwise=True)[:, 0]
+            rnet_values = self(comp_obs.repeat(obss.size(0), 1), obss, batchwise=True)[
+                :, 0
+            ]
         return rnet_values.numpy()
