@@ -56,7 +56,7 @@ class RNetMemory(GraphMemory):
             rnet_values_reverse = self.compare_embeddings(e, rnet_model,
                     reverse_dir=True)
             NNi = torch.argmax(rnet_values_reverse).item()
-            nov = - (min(rnet_values[NNo], rnet_values_reverse[NNi]) -
+            nov = - (max(rnet_values[NNo], rnet_values_reverse[NNi]) -
                     self.cfg.thresh).item()
             return e, nov, NNi, NNo
         return e, - (rnet_values[NNo] - self.cfg.thresh).item(), NNo, NNo

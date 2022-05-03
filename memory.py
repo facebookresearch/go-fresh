@@ -95,12 +95,12 @@ class GraphMemory(Memory):
             self.add_single_edge(prev_NNi, NNi)
             self.add_single_edge(NNi, prev_NNi)
             return
-        self.add_single_edge(prev_NNi, NNi)
-        self.add_single_edge(prev_NNo, NNo)
+        self.add_single_edge(prev_NNi, prev_NNo)
+        self.add_single_edge(NNi, NNo)
         self.add_single_edge(prev_NNi, NNo)
 
     def add_single_edge(self, i, j):
-        if not i == -1 and not j == -1:
+        if not i == -1 and not j == -1 and not i == j:
             self.adj_matrix[i, j] = True
 
     def flush(self):
