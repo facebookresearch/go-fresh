@@ -22,7 +22,6 @@ eval:
     num_episodes: 100
 
 rnet:
-    load_from: /checkpoint/${env:USER}/offline-gcrl/rnet/walker_thresh2
     model:
         remove_velocity: true
         dims_to_keep: 15
