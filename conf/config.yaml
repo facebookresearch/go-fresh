@@ -3,7 +3,7 @@ main:
     suffix:
     logs_dir: /checkpoint/${env:USER}/offline-gcrl/logs/${main.name}  # store all model files
     save_interval: 100
-    oracle_reward: false
+    reward: graph  # how reward is computed. options: graph, rnet, oracle
     run: #dummy variable for several runs
 
 env:

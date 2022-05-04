@@ -32,11 +32,16 @@ def train_memory(cfg, model, explr_embs, expl_buffer, space_info, device):
     return memory
 
 
-def train_policy(cfg, expl_buffer, memory, NN, space_info, device, log, tb_log):
+def train_policy(
+    cfg, expl_buffer, explr_embs, rnet_model, memory, NN, space_info, device, log, tb_log
+):
     kwargs = {}
-    if not cfg.main.oracle_reward:
+    if cfg.main.reward == "graph":
         kwargs["NN"] = NN
         kwargs["graph_dist"] = memory.dist
+    elif cfg.main.reward == "rnet":
+        kwargs["rnet_model"] = rnet_model
+        kwargs["explr_embs"] = explr_embs
 
     replay_buffer = ReplayBuffer(cfg.replay_buffer, space_info, device)
 
@@ -47,13 +52,6 @@ def train_policy(cfg, expl_buffer, memory, NN, space_info, device, log, tb_log):
     num_updates = 0
     for epoch in range(cfg.optim.num_epochs):
         log.info(f"epoch: {epoch}")
-
-        # EVAL
-        eval_stats = eval.run(
-            agent, cfg.eval.num_episodes, buffers, barriers, n_eval_done, info_keys
-        )
-        log.info("eval " + " - ".join([f"{k}: {v:.2f}" for k, v in eval_stats.items()]))
-        tb_log.add_stats(eval_stats, epoch, "eval")
 
         # TRAIN
         replay_buffer.flush()
@@ -66,6 +64,13 @@ def train_policy(cfg, expl_buffer, memory, NN, space_info, device, log, tb_log):
         num_updates += train_stats["updates"]
         train_stats["updates"] = num_updates
         tb_log.add_stats(train_stats, epoch, "train")
+
+        # EVAL
+        eval_stats = eval.run(
+            agent, cfg.eval.num_episodes, buffers, barriers, n_eval_done, info_keys
+        )
+        log.info("eval " + " - ".join([f"{k}: {v:.2f}" for k, v in eval_stats.items()]))
+        tb_log.add_stats(eval_stats, epoch, "eval")
 
         if epoch % cfg.main.save_interval == 0:
             agent.save_checkpoint(cfg.main.logs_dir, epoch)
@@ -84,53 +89,73 @@ def main(cfg):
     space_info = utils.get_space_info(cfg.env.obs, cfg.env.action_dim)
     expl_buffer = ExplorationBuffer(cfg.exploration_buffer, log)
 
-    # RNet
-    rnet_model = RNetModel(cfg.rnet.model, space_info).to(device)
-    log.info(rnet_model)
-    rnet_path = path.join(cfg.main.logs_dir, "model.pth")
-    if path.exists(rnet_path):
-        log.info(f"Loading RNet from {rnet_path}")
-        rnet_model.load(rnet_path)
-    else:
-        log.info("Training RNet")
-        train_rnet(cfg, rnet_model, expl_buffer, tb_log, device)
-        log.info(f"Saving RNet to {rnet_path}")
-        rnet_model.save(rnet_path)
+    if cfg.main.reward in ["rnet", "graph"]:
+        # RNet
+        rnet_model = RNetModel(cfg.rnet.model, space_info).to(device)
+        log.info(rnet_model)
+        rnet_path = path.join(cfg.main.logs_dir, "model.pth")
+        if path.exists(rnet_path):
+            log.info(f"Loading RNet from {rnet_path}")
+            rnet_model.load(rnet_path)
+        else:
+            log.info("Training RNet")
+            train_rnet(cfg, rnet_model, expl_buffer, tb_log, device)
+            log.info(f"Saving RNet to {rnet_path}")
+            rnet_model.save(rnet_path)
+        explr_embs = embed_expl_buffer(expl_buffer, rnet_model, device)
 
-    explr_embs = embed_expl_buffer(expl_buffer, rnet_model, device)
-
-    # Memory and graph
-    memory_path = path.join(cfg.main.logs_dir, "memory.npy")
-    if path.exists(memory_path):
-        log.info(f"Loading memory from {memory_path}")
-        memory = RNetMemory(cfg.rnet.memory, space_info, rnet_model.feat_size, device)
-        memory.load(memory_path)
+        # Memory and graph
+        memory_path = path.join(cfg.main.logs_dir, "memory.npy")
+        if path.exists(memory_path):
+            log.info(f"Loading memory from {memory_path}")
+            memory = RNetMemory(
+                cfg.rnet.memory, space_info, rnet_model.feat_size, device
+            )
+            memory.load(memory_path)
+        else:
+            log.info("Training memory")
+            memory = train_memory(
+                cfg=cfg,
+                model=rnet_model,
+                explr_embs=explr_embs,
+                expl_buffer=expl_buffer,
+                space_info=space_info,
+                device=device,
+            )
+            memory.save(memory_path)
+        log.info(f"Memory size: {len(memory)}")
     else:
-        log.info("Training memory")
-        memory = train_memory(
-            cfg=cfg,
-            model=rnet_model,
-            explr_embs=explr_embs,
-            expl_buffer=expl_buffer,
-            space_info=space_info,
-            device=device,
-        )
-        memory.save(memory_path)
-    log.info(f"Memory size: {len(memory)}")
+        rnet_model = None
+        explr_embs = None
+        memory = None
 
-    # Nearest neigbhor
-    NN_path = path.join(cfg.main.logs_dir, "NN.npy")
-    if path.exists(NN_path):
-        log.info(f"Loading NN from {NN_path}")
-        NN = np.load(NN_path)
+    if cfg.main.reward in ["graph"]:
+        # Nearest neigbhor
+        NN_path = path.join(cfg.main.logs_dir, "NN.npy")
+        if path.exists(NN_path):
+            log.info(f"Loading NN from {NN_path}")
+            NN = np.load(NN_path)
+        else:
+            log.info("Computing NN")
+            NN = compute_NN(explr_embs, rnet_model, memory, device)
+            np.save(NN_path, NN)
     else:
-        log.info("Computing NN")
-        NN = compute_NN(explr_embs, rnet_model, memory, device)
-        np.save(NN_path, NN)
+        NN = None
 
     # Policy
     log.info("Training policy")
-    train_policy(cfg, expl_buffer, memory, NN, space_info, device, log, tb_log)
+    train_policy(
+        cfg=cfg,
+        expl_buffer=expl_buffer,
+        explr_embs=explr_embs,
+        rnet_model=rnet_model,
+        memory=memory,
+        NN=NN,
+        space_info=space_info,
+        device=device,
+        log=log,
+        tb_log=tb_log,
+    )
 
 
 if __name__ == "__main__":

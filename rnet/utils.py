@@ -133,7 +133,7 @@ def oracle_reward(x1, x2):
 
 
 def fill_replay_buffer(
-    replay_buffer, exploration_buffer, cfg, NN=None, graph_dist=None
+    replay_buffer, exploration_buffer, cfg, NN=None, graph_dist=None, rnet_model=None, explr_embs=None
 ):
     print("filling replay buffer")
     while not replay_buffer.is_full():
@@ -145,12 +145,19 @@ def fill_replay_buffer(
         s_obs, s1, s2 = exploration_buffer.get_random_obs()
         state = {"obs": s_obs, "goal_obs": g_obs}
         next_state = {"obs": exploration_buffer.obss[s1][s2 + 1], "goal_obs": g_obs}
-        if cfg.main.oracle_reward:
+        if cfg.main.reward == "oracle":
             reward = oracle_reward(
                 exploration_buffer.states[s1][s2 + 1], exploration_buffer.states[g1][g2]
             )
-        else:
+        elif cfg.main.reward == "rnet":
+            s_emb = explr_embs[s1, s2]
+            g_emb = explr_embs[g1, g2]
+            rval = rnet_model.compare_embeddings(s_emb.unsqueeze(0), g_emb.unsqueeze(0), batchwise=True)
+            reward = rval[0, 1].item()
+        elif cfg.main.reward == "graph":
             reward = -graph_dist[NN[s1, s2 + 1], NN[g1, g2]]
+        else:
+            raise ValueError()
         replay_buffer.push(
             state, exploration_buffer.actions[s1][s2 + 1], reward, next_state
         )
