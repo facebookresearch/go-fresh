@@ -52,9 +52,9 @@ class RNetMemory(GraphMemory):
 
     def compute_novelty(self, rnet_model, e):
         assert not rnet_model.training
+        rnet_values = self.compare_embeddings(e, rnet_model, both_dir=self.cfg.directed)
         if self.cfg.directed:
             # both directions need to be novel
-            rnet_values = self.compare_embeddings(e, rnet_model, both_dir=True)
             NNi = torch.argmax(rnet_values[: len(self)]).item()
             NNo = torch.argmax(rnet_values[len(self):]).item()
             nov = -(
@@ -62,9 +62,8 @@ class RNetMemory(GraphMemory):
             ).item()
             return nov, NNi, NNo
         else:
-            rnet_values = self.compare_embeddings(e, rnet_model)
-            argmax = torch.argmax(rnet_values).item()
-            return - (rnet_values[argmax] - self.cfg.thresh).item(), argmax, argmax
+            NN = torch.argmax(rnet_values).item()
+            return - (rnet_values[NN] - self.cfg.thresh).item(), NN, NN
 
     def compute_rnet_values(self, rnet_model):
         rnet_values = np.zeros((len(self), len(self)))
@@ -73,11 +72,11 @@ class RNetMemory(GraphMemory):
         return rnet_values
 
     def get_NN(self, rnet_model, e, mask=None):
-        rnet_values = self.compare_embeddings(e, rnet_model)
+        rnet_values = self.compare_embeddings(e, rnet_model, both_dir=self.cfg.directed)
         if mask is not None:
             rnet_values[mask] = -np.inf
-        argmax = torch.argmax(rnet_values).item()
-        return argmax, rnet_values[argmax].item()
+        NN = torch.argmax(rnet_values).item() % len(self)
+        return NN, rnet_values[NN].item()
 
     def connect_graph(self, rnet_model):
         while True:
