@@ -136,6 +136,12 @@ def fill_replay_buffer(
     replay_buffer, exploration_buffer, cfg, NN=None, graph_dist=None, rnet_model=None, explr_embs=None
 ):
     print("filling replay buffer")
+
+    if cfg.main.reward == "rnet":
+        # will compute rewards in parallel for efficiency
+        assert len(replay_buffer) == 0
+        s_emb, g_emb = [], []
+
     while not replay_buffer.is_full():
         if cfg.train.goal_strat == "rb":
             g_obs, g1, g2 = exploration_buffer.get_random_obs()
@@ -150,10 +156,9 @@ def fill_replay_buffer(
                 exploration_buffer.states[s1][s2 + 1], exploration_buffer.states[g1][g2]
             )
         elif cfg.main.reward == "rnet":
-            s_emb = explr_embs[s1, s2]
-            g_emb = explr_embs[g1, g2]
-            rval = rnet_model.compare_embeddings(s_emb.unsqueeze(0), g_emb.unsqueeze(0), batchwise=True)
-            reward = rval[0, 1].item()
+            s_emb.append(explr_embs[s1, s2])
+            g_emb.append(explr_embs[g1, g2])
+            reward = 0  # will compute it later in parallel
         elif cfg.main.reward == "graph":
             reward = -graph_dist[NN[s1, s2 + 1], NN[g1, g2]]
         else:
@@ -161,6 +166,15 @@ def fill_replay_buffer(
         replay_buffer.push(
             state, exploration_buffer.actions[s1][s2 + 1], reward, next_state
         )
+
+    if cfg.main.reward == "rnet":
+        assert replay_buffer.is_full()
+        s_emb = torch.stack(s_emb)
+        g_emb = torch.stack(g_emb)
+        rval = rnet_model.compare_embeddings(s_emb, g_emb, batchwise=True)
+        rewards = rval[:, 0]
+        assert rewards.size(0) == len(replay_buffer)
+        replay_buffer.rewards[:, 0].copy_(rewards)
 
 
 def save(save_dir, model, memory, NN):
