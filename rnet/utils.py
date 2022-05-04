@@ -120,11 +120,11 @@ def compute_NN(explr_embs, model, memory, device):
     num_trajs, traj_len = explr_embs.size()[:2]
     memory.embs = memory.embs.to(device)
     NN = np.zeros((num_trajs, traj_len), dtype=int)
-    skip = memory.cfg.skip
+    bs = memory.cfg.NN_batch_size
     for traj_idx in tqdm(range(num_trajs), desc="computing NN"):
-        for i in range(0, traj_len, skip):
-            j = i + skip // 2 if i + skip // 2 < traj_len else i
-            NN[traj_idx][i:i + skip] = memory.get_NN(model, explr_embs[traj_idx][j])[0]
+        for i in range(0, traj_len, bs):
+            j = min(i + bs, traj_len)
+            NN[traj_idx][i:j] = memory.get_batch_NN(model, explr_embs[traj_idx][i:j])[0]
     return NN
 
 
