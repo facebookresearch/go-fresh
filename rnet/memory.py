@@ -35,13 +35,15 @@ class RNetMemory(GraphMemory):
                 self.obss[: len(self)].float()
             )
 
-    def compare_embeddings(self, emb, rnet_model, reverse_dir=False):
+    def compare_embeddings(self, emb, rnet_model, both_dir=False):
         assert not rnet_model.training
         emb_batch = emb.expand(len(self), -1)
         with torch.no_grad():
-            if reverse_dir:
+            if both_dir:
+                left_batch = torch.cat((emb_batch, self.embs[: len(self)]))
+                right_batch = torch.cat((self.embs[: len(self)], emb_batch))
                 return rnet_model.compare_embeddings(
-                    self.embs[: len(self)], emb_batch, batchwise=True
+                    left_batch, right_batch, batchwise=True
                 )[:, 0]
             else:
                 return rnet_model.compare_embeddings(
@@ -50,19 +52,19 @@ class RNetMemory(GraphMemory):
 
     def compute_novelty(self, rnet_model, e):
         assert not rnet_model.training
-        rnet_values = self.compare_embeddings(e, rnet_model)
-        NNo = torch.argmax(rnet_values).item()
         if self.cfg.directed:
             # both directions need to be novel
-            rnet_values_reverse = self.compare_embeddings(
-                e, rnet_model, reverse_dir=True
-            )
-            NNi = torch.argmax(rnet_values_reverse).item()
+            rnet_values = self.compare_embeddings(e, rnet_model, both_dir=True)
+            NNi = torch.argmax(rnet_values[: len(self)]).item()
+            NNo = torch.argmax(rnet_values[len(self):]).item()
             nov = -(
-                max(rnet_values[NNo], rnet_values_reverse[NNi]) - self.cfg.thresh
+                max(rnet_values[NNo + len(self)], rnet_values[NNi]) - self.cfg.thresh
             ).item()
             return nov, NNi, NNo
-        return -(rnet_values[NNo] - self.cfg.thresh).item(), NNo, NNo
+        else:
+            rnet_values = self.compare_embeddings(e, rnet_model)
+            argmax = torch.argmax(rnet_values).item()
+            return - (rnet_values[argmax] - self.cfg.thresh).item(), argmax, argmax
 
     def compute_rnet_values(self, rnet_model):
         rnet_values = np.zeros((len(self), len(self)))
