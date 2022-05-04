@@ -39,7 +39,8 @@ class SAC(object):
         hard_update(self.critic_target, self.critic)
 
         if self.cfg.policy.type == "Gaussian":
-            # Target Entropy = −dim(A) (e.g. , -6 for HalfCheetah-v2) as given in the paper
+            # Target Entropy = −dim(A) (e.g. , -6 for HalfCheetah-v2) as given in the
+            # paper
             if self.cfg.optim.entropy.auto_tuning is True:
                 self.target_entropy = -torch.prod(
                     torch.Tensor((space_info["action_dim"],)).to(self.device)
@@ -98,9 +99,8 @@ class SAC(object):
             qf1_next_target, qf2_next_target = self.critic_target(
                 next_state_batch, next_state_action
             )
-            min_qf_next_target = (
-                torch.min(qf1_next_target, qf2_next_target) - self.alpha * next_state_log_pi
-            )
+            min_qf_next_target = torch.min(qf1_next_target, qf2_next_target)
+            min_qf_next_target -= self.alpha * next_state_log_pi
             next_q_value = (
                 reward_batch + mask_batch * self.cfg.optim.gamma * min_qf_next_target
             )

@@ -30,7 +30,7 @@ class FeatureEncoder(nn.Module):
 
         elif space_info["obs_type"] == "rgb":
             n, m = obs_shape[1], obs_shape[2]
-            d = lambda x: (((x - 1) // 2 - 1) // 2 - 1) // 2
+            def d(x): return (((x - 1) // 2 - 1) // 2 - 1) // 2
             conv_outdim = d(m) * d(n) * 32
             modules = [
                 nn.Conv2d(3, 8, (2, 2)),
@@ -110,7 +110,8 @@ class RNetModel(nn.Module):
         """
         Input: x is a Nxd matrix
                y is an optional Mxd matirx
-        Output: dist is a NxM matrix where dist[i,j] is the square norm between x[i,:] and y[j,:]
+        Output: dist is a NxM matrix where dist[i,j] is the square norm between x[i,:]
+                    and y[j,:]
                 if y is not given then use 'y=x'.
         i.e. dist[i,j] = ||x[i,:]-y[j,:]||^2
         """

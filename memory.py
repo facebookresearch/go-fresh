@@ -1,6 +1,7 @@
 import torch
 import random
 import numpy as np
+import matplotlib.pyplot as plt
 import scipy.sparse.csgraph as csg
 
 
@@ -52,7 +53,6 @@ class Memory:
             n = len(self)
         assert n <= len(self)
         num_rows = n // num_cols + int(n % num_cols != 0)
-        # TODO: plt is not defined
         fig, ax = plt.subplots(num_rows, num_cols, figsize=(2 * num_cols, 2 * num_rows))
         for i in range(n):
             img = self.to_numpy(self.obss[i]).transpose((1, 2, 0))

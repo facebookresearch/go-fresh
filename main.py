@@ -21,7 +21,7 @@ from rnet.utils import build_memory, compute_NN, embed_expl_buffer
 
 def train_rnet(cfg, model, expl_buffer, tb_log, device):
     dataset = RNetPairsSplitDataset(cfg.rnet.dataset, expl_buffer)
-    stats = rnet_utils.train(cfg.rnet.train, model, dataset, device, tb_log)
+    _ = rnet_utils.train(cfg.rnet.train, model, dataset, device, tb_log)
 
 
 def train_memory(cfg, model, explr_embs, expl_buffer, space_info, device):

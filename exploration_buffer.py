@@ -26,22 +26,6 @@ class ExplorationBuffer(object):
         traj_buffer = {k: np.stack(v) for k, v in traj_buffer.items()}
         return traj_buffer
 
-    def seq_img(self, files, num_procs, env):
-        for path in files:
-            with np.load(path) as data:
-                print(path)
-                state_traj = data["physics"]
-                data["image"] = []
-                for i in range(len(state_traj)):
-                    # TODO: fix this! state is not defined
-                    env.unwrapped._env.physics.set_state(state)
-                    env.unwrapped._env.physics.forward()
-                    data["image"].append(env.render(mode="rgb_array"))
-                data["image"] = np.stack(data["image"])
-                print(data["image"].shape)
-                print(data["image"].dtype)
-            np.save(path, data)
-
     def load_data(self, data_dir):
         self.print_fn("loading exploration buffer")
         ep_files = [os.path.join(data_dir, f) for f in os.listdir(data_dir)]

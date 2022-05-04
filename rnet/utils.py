@@ -18,10 +18,14 @@ def train(cfg, model, dataset, device, tb_log=None):
     )
     dataloader = {
         "train": torch.utils.data.DataLoader(
-            dataset.train, batch_size=cfg.batch_size, num_workers=cfg.num_workers
+            dataset.train,
+            batch_size=cfg.batch_size,
+            num_workers=cfg.num_workers
         ),
         "val": torch.utils.data.DataLoader(
-            dataset.val, batch_size=cfg.batch_size, num_workers=cfg.num_workers
+            dataset.val,
+            batch_size=cfg.batch_size,
+            num_workers=cfg.num_workers
         ),
     }
     stats = {}
@@ -95,7 +99,7 @@ def build_memory(cfg, explr_embs, space_info, model, exploration_buffer, device)
             prev_NNi = NNi
             prev_NNo = NNo
 
-    memory.adj_matrix = memory.adj_matrix[: len(memory), : len(memory)]
+    memory.adj_matrix = memory.adj_matrix[:len(memory), :len(memory)]
     memory.compute_dist()
     return memory
 
@@ -120,9 +124,7 @@ def compute_NN(explr_embs, model, memory, device):
     for traj_idx in tqdm(range(num_trajs), desc="computing NN"):
         for i in range(0, traj_len, skip):
             j = i + skip // 2 if i + skip // 2 < traj_len else i
-            NN[traj_idx][i : i + skip] = memory.get_NN(
-                model, explr_embs[traj_idx][j]
-            )[0]
+            NN[traj_idx][i:i + skip] = memory.get_NN(model, explr_embs[traj_idx][j])[0]
     return NN
 
 
