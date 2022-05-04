@@ -71,7 +71,7 @@ def train(cfg, model, dataset, device, tb_log=None):
     return stats
 
 
-def build_memory(cfg, space_info, model, exploration_buffer, device):
+def build_memory(cfg, explr_embs, space_info, model, exploration_buffer, device):
     model.eval()
     memory = RNetMemory(cfg, space_info, model.feat_size, device)
 
@@ -85,9 +85,10 @@ def build_memory(cfg, space_info, model, exploration_buffer, device):
         prev_NNo = -1
         traj = exploration_buffer.get_traj(traj_idx)
         for i in range(0, exploration_buffer.traj_len, cfg.skip):
-            x = torch.from_numpy(traj["obs"][i]).to(device)
-            e, novelty, NNi, NNo = memory.compute_novelty(model, x)
+            e = explr_embs[traj_idx][i].unsqueeze(0)
+            novelty, NNi, NNo = memory.compute_novelty(model, e)
             if novelty > 0:
+                x = torch.from_numpy(traj["obs"][i]).to(device)
                 NN = memory.add(x, traj["state"][i], e)
                 NNi, NNo = NN, NN
             memory.add_edge(prev_NNi, prev_NNo, NNi, NNo)
@@ -102,7 +103,7 @@ def build_memory(cfg, space_info, model, exploration_buffer, device):
 def embed_expl_buffer(exploration_buffer, model, device):
     model.eval()
     num_trajs, traj_len = len(exploration_buffer), exploration_buffer.traj_len
-    embs = torch.zeros((num_trajs, traj_len, model.feat_size))
+    embs = torch.zeros((num_trajs, traj_len, model.feat_size), device=device)
     for traj_idx in tqdm(range(num_trajs), desc="embed exploration buffer"):
         traj = exploration_buffer.get_traj(traj_idx)["obs"]
         traj = torch.from_numpy(traj).float().to(device)
@@ -111,9 +112,8 @@ def embed_expl_buffer(exploration_buffer, model, device):
     return embs
 
 
-def compute_NN(exploration_buffer, model, memory, device):
-    embs = embed_expl_buffer(exploration_buffer, model, device)
-    num_trajs, traj_len = len(exploration_buffer), exploration_buffer.traj_len
+def compute_NN(explr_embs, model, memory, device):
+    num_trajs, traj_len = explr_embs.size()[:2]
     memory.embs = memory.embs.to(device)
     NN = np.zeros((num_trajs, traj_len), dtype=int)
     skip = memory.cfg.skip
@@ -121,7 +121,7 @@ def compute_NN(exploration_buffer, model, memory, device):
         for i in range(0, traj_len, skip):
             j = i + skip // 2 if i + skip // 2 < traj_len else i
             NN[traj_idx][i : i + skip] = memory.get_NN(
-                model, embs[traj_idx][j].to(device)
+                model, explr_embs[traj_idx][j]
             )[0]
     return NN
 
