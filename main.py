@@ -16,7 +16,7 @@ from replay_buffer import ReplayBuffer
 from exploration_buffer import ExplorationBuffer
 from rnet.model import RNetModel
 from rnet.dataset import RNetPairsSplitDataset
-from rnet.utils import build_memory, compute_NN
+from rnet.utils import build_memory, compute_NN, embed_expl_buffer
 
 
 def train_rnet(cfg, model, expl_buffer, tb_log, device):
@@ -24,12 +24,12 @@ def train_rnet(cfg, model, expl_buffer, tb_log, device):
     stats = rnet_utils.train(cfg.rnet.train, model, dataset, device, tb_log)
 
 
-def train_memory(cfg, memory, model, expl_buffer, space_info, device):
-    model.eval()
-    memory = build_memory(cfg.rnet.memory, space_info, model, expl_buffer, device)
+def train_memory(cfg, model, explr_embs, expl_buffer, space_info, device):
+    memory = build_memory(
+        cfg.rnet.memory, explr_embs, space_info, model, expl_buffer, device
+    )
     memory.compute_dist()
-    NN = compute_NN(expl_buffer, model, memory, device)
-    return memory, NN
+    return memory
 
 
 def train_policy(cfg, expl_buffer, memory, NN, space_info, device, log, tb_log):
@@ -97,20 +97,36 @@ def main(cfg):
         log.info(f"Saving RNet to {rnet_path}")
         rnet_model.save(rnet_path)
 
+    explr_embs = embed_expl_buffer(expl_buffer, rnet_model, device)
+
     # Memory and graph
-    memory = RNetMemory(cfg.rnet.memory, space_info, rnet_model.feat_size, device)
     memory_path = path.join(cfg.main.logs_dir, "memory.npy")
-    NN_path = path.join(cfg.main.logs_dir, "NN.npy")
     if path.exists(memory_path):
         log.info(f"Loading memory from {memory_path}")
+        memory = RNetMemory(cfg.rnet.memory, space_info, rnet_model.feat_size, device)
         memory.load(memory_path)
-        NN = np.load(NN_path)
     else:
         log.info("Training memory")
-        NN = train_memory(cfg, memory, rnet_model, expl_buffer, space_info, device)
+        memory = train_memory(
+            cfg=cfg,
+            model=rnet_model,
+            explr_embs=explr_embs,
+            expl_buffer=expl_buffer,
+            space_info=space_info,
+            device=device,
+        )
         memory.save(memory_path)
-        np.save(NN_path, NN)
     log.info(f"Memory size: {len(memory)}")
+
+    # Nearest neigbhor
+    NN_path = path.join(cfg.main.logs_dir, "NN.npy")
+    if path.exists(NN_path):
+        log.info(f"Loading NN from {NN_path}")
+        NN = np.load(NN_path)
+    else:
+        log.info("Computing NN")
+        NN = compute_NN(explr_embs, rnet_model, memory, device)
+        np.save(NN_path, NN)
 
     # Policy
     log.info("Training policy")
