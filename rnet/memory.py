@@ -79,9 +79,10 @@ class RNetMemory(GraphMemory):
         return NN, rnet_values[NN].item()
 
     def get_batch_NN(self, rnet_model, e):
-        batch_size = e.size(0)
-        batch_e = torch.repeat_interleave(e, len(self), dim=0)
-        memory_batch = self.embs[: len(self)].repeat(batch_size, 1)
+        bsz = e.size(0)
+        memsz = len(self)
+        batch_e = torch.repeat_interleave(e, memsz, dim=0)
+        memory_batch = self.embs[: memsz].repeat(bsz, 1)
         if self.cfg.directed:
             left_batch = torch.cat((batch_e, memory_batch))
             right_batch = torch.cat((memory_batch, batch_e))
@@ -89,21 +90,13 @@ class RNetMemory(GraphMemory):
                 rnet_vals = rnet_model.compare_embeddings(
                     left_batch, right_batch, batchwise=True
                 )[:, 0]
-            NN = torch.zeros(batch_size).long()
-            for i in range(batch_size):
-                intrvl = np.arange(i * len(self), (i + 1) * len(self))
-                idx = np.concatenate((intrvl, batch_size * len(self) + intrvl))
-                NN[i] = torch.argmax(rnet_vals[idx]).item() % len(self)
-            return NN, rnet_vals[NN]
+            rnet_vals = torch.max(rnet_vals[: memsz * bsz], rnet_vals[memsz * bsz:])
         else:
             with torch.no_grad():
                 rnet_vals = rnet_model.compare_embeddings(
                     batch_e, memory_batch, batchwise=True
                 )[:, 0]
-            NN = [torch.argmax(rnet_vals[
-                    i * len(self): (i + 1) * len(self)
-                ]).item() for i in range(batch_size)]
-            return torch.tensor(NN), rnet_vals[NN]
+        return rnet_vals.view(bsz, memsz).max(dim=1)[1].cpu()
 
     def connect_graph(self, rnet_model):
         while True:
