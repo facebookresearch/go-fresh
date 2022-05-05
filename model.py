@@ -65,7 +65,7 @@ class RNetPlusHead(nn.Module):
         super(RNetPlusHead, self).__init__()
         self.normalize = cfg.normalize
         n, m = obs_shape[1], obs_shape[2]
-        d = lambda x: ((((x - 1) // 2 - 1) // 2 - 1) // 2 - 1) // 2
+        def d(x): return ((((x - 1) // 2 - 1) // 2 - 1) // 2 - 1) // 2
         conv_outdim = d(m) * d(n) * 64
         modules = [
             nn.Conv2d(3, 8, (2, 2)),
@@ -96,7 +96,7 @@ class RNetHead(nn.Module):
         super(RNetHead, self).__init__()
         self.normalize = cfg.normalize
         n, m = obs_shape[1], obs_shape[2]
-        d = lambda x: (((x - 1) // 2 - 1) // 2 - 1) // 2
+        def d(x): return (((x - 1) // 2 - 1) // 2 - 1) // 2
         conv_outdim = d(m) * d(n) * 32
         modules = [
             nn.Conv2d(3, 8, (2, 2)),
