@@ -133,7 +133,13 @@ def oracle_reward(x1, x2):
 
 
 def fill_replay_buffer(
-    replay_buffer, exploration_buffer, cfg, NN=None, graph_dist=None, rnet_model=None, explr_embs=None
+    replay_buffer,
+    exploration_buffer,
+    cfg,
+    NN=None,
+    graph_dist=None,
+    rnet_model=None,
+    explr_embs=None
 ):
     print("filling replay buffer")
 
