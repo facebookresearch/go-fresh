@@ -162,7 +162,7 @@ def fill_replay_buffer(
                 exploration_buffer.states[s1][s2 + 1], exploration_buffer.states[g1][g2]
             )
         elif cfg.main.reward == "rnet":
-            s_emb.append(explr_embs[s1, s2])
+            s_emb.append(explr_embs[s1, s2 + 1])
             g_emb.append(explr_embs[g1, g2])
             reward = 0  # will compute it later in parallel
         elif cfg.main.reward == "graph":
