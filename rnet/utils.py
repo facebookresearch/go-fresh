@@ -175,13 +175,23 @@ def load(save_dir, memory, model=None):
     print("Loading rnet objects from ", save_dir)
     if model is not None:
         model_path = os.path.join(save_dir, "model.pth")
-        model.load(model_path)
+        if os.path.exists(model_path):
+            model.load(model_path)
+        else:
+            print("model path not found")
 
     memory_path = os.path.join(save_dir, "memory.npy")
-    memory.load(memory_path)
+    if os.path.exists(memory_path):
+        memory.load(memory_path)
+    else:
+        print("memory path not found")
 
     NN_path = os.path.join(save_dir, "NN.npy")
-    NN = np.load(NN_path)
+    if os.path.exists(NN_path):
+        NN = np.load(NN_path)
+    else:
+        print("NN path not found")
+        NN = None
 
     if model is None:
         return memory, NN
