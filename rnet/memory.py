@@ -35,35 +35,20 @@ class RNetMemory(GraphMemory):
                 self.obss[: len(self)].float()
             )
 
-    def compare_embeddings(self, emb, rnet_model, both_dir=False):
+    def compare_embeddings(self, emb, rnet_model, incoming_dir=False):
         assert not rnet_model.training
         emb_batch = emb.expand(len(self), -1)
         with torch.no_grad():
-            if both_dir:
-                left_batch = torch.cat((emb_batch, self.embs[: len(self)]))
-                right_batch = torch.cat((self.embs[: len(self)], emb_batch))
-                return rnet_model.compare_embeddings(
-                    left_batch, right_batch, batchwise=True
-                )[:, 0]
-            else:
-                return rnet_model.compare_embeddings(
-                    emb_batch, self.embs[: len(self)], batchwise=True
-                )[:, 0]
+            return rnet_model.compare_embeddings(
+                emb_batch, self.embs[: len(self)], batchwise=True, reverse_dir=incoming_dir
+            )[:, 0]
 
-    def compute_novelty(self, rnet_model, e):
+    def compute_novelty(self, rnet_model, e, incoming_dir=False):
         assert not rnet_model.training
-        rnet_values = self.compare_embeddings(e, rnet_model, both_dir=self.cfg.directed)
-        if self.cfg.directed:
-            # both directions need to be novel
-            rnet_values = self.compare_embeddings(e, rnet_model, both_dir=True)
-            nov_o, NNo = torch.max(rnet_values[: len(self)], dim=0)
-            nov_i, NNi = torch.max(rnet_values[len(self):], dim=0)
-            nov = - (max(nov_o, nov_i) - self.cfg.thresh)
-            return nov.item(), NNi.item(), NNo.item()
-        else:
-            rnet_values = self.compare_embeddings(e, rnet_model)
-            nov, NN = torch.max(rnet_values, dim=0).item()
-            return - (nov - self.cfg.thresh).item(), NN, NN
+        rnet_values = self.compare_embeddings(e, rnet_model, incoming_dir=incoming_dir)
+        rnet_max, NN = torch.max(rnet_values, dim=0)
+        nov = -(rnet_max.item() - self.cfg.thresh)
+        return nov, NN.item()
 
     def compute_rnet_values(self, rnet_model):
         rnet_values = np.zeros((len(self), len(self)))
@@ -71,36 +56,30 @@ class RNetMemory(GraphMemory):
             rnet_values[i] = self.compare_embeddings(self.embs[i], rnet_model).cpu()
         return rnet_values
 
-    def get_NN(self, rnet_model, e, mask=None):
-        rnet_values = self.compare_embeddings(e, rnet_model, both_dir=self.cfg.directed)
+    def get_NN(self, rnet_model, e, mask=None, incoming_dir=False):
+        rnet_values = self.compare_embeddings(e, rnet_model, incoming_dir=incoming_dir)
         if mask is not None:
             rnet_values[mask] = -np.inf
-        NN = torch.argmax(rnet_values).item() % len(self)
-        return NN, rnet_values[NN].item()
+        rnet_max, NN = torch.max(rnet_values, dim=0)
+        return NN.item(), rnet_max.item()
 
-    def get_batch_NN(self, rnet_model, e):
+    def get_batch_NN(self, rnet_model, e, incoming_dir=False):
         bsz = e.size(0)
         memsz = len(self)
         batch_e = torch.repeat_interleave(e, memsz, dim=0)
-        memory_batch = self.embs[: memsz].repeat(bsz, 1)
-        if self.cfg.directed:
-            left_batch = torch.cat((batch_e, memory_batch))
-            right_batch = torch.cat((memory_batch, batch_e))
-            with torch.no_grad():
-                rnet_vals = rnet_model.compare_embeddings(
-                    left_batch, right_batch, batchwise=True
-                )[:, 0]
-            rnet_vals = torch.max(rnet_vals[: memsz * bsz], rnet_vals[memsz * bsz:])
-        else:
-            with torch.no_grad():
-                rnet_vals = rnet_model.compare_embeddings(
-                    batch_e, memory_batch, batchwise=True
-                )[:, 0]
+        memory_batch = self.embs[:memsz].repeat(bsz, 1)
+        with torch.no_grad():
+            rnet_vals = rnet_model.compare_embeddings(
+                batch_e, memory_batch, batchwise=True, reverse_dir=incoming_dir
+            )[:, 0]
         return rnet_vals.view(bsz, memsz).max(dim=1)[1].cpu()
 
     def get_nb_connected_components(self, return_labels=False):
         return csg.connected_components(
-                self.adj_matrix, directed=self.cfg.directed, return_labels=return_labels
+            self.adj_matrix,
+            directed=self.cfg.directed,
+            connection="strong",
+            return_labels=return_labels,
         )
 
     def connect_graph(self, rnet_model):

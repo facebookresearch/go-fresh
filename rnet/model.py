@@ -125,7 +125,7 @@ class RNetModel(nn.Module):
         dist = x_norm + y_norm - 2.0 * torch.mm(x, y_t)
         return torch.clamp(dist, 0.0, np.inf)
 
-    def compare_embeddings(self, e1, e2, equal=False, batchwise=False):
+    def compare_embeddings(self, e1, e2, equal=False, batchwise=False, reverse_dir=False):
         if self.comparator_type == "dot":
             if batchwise:
                 logits = torch.bmm(e1.unsqueeze(1), e2.unsqueeze(2))[:, :, 0]
@@ -140,6 +140,7 @@ class RNetModel(nn.Module):
                 raise NotImplementedError
 
         elif self.comparator_type == "dot-W":
+            assert not reverse_dir, "not implemented"
             proj2 = torch.matmul(self.W, e2.T)
             if batchwise:
                 logits = torch.bmm(e1.unsqueeze(1), proj2.T.unsqueeze(2))[:, :, 0]
@@ -156,7 +157,10 @@ class RNetModel(nn.Module):
 
         elif self.comparator_type == "net":
             if batchwise:
-                x = torch.cat((e1, e2), 1)
+                if reverse_dir:
+                    x = torch.cat((e2, e1), 1)
+                else:
+                    x = torch.cat((e1, e2), 1)
                 return self.comparator(x) - self.bias
             else:
                 raise NotImplementedError

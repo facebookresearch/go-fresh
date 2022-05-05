@@ -85,21 +85,29 @@ def build_memory(cfg, explr_embs, space_info, model, exploration_buffer, device)
     for traj_idx in tqdm(range(len(exploration_buffer)), desc="Updating Memory"):
         if random.random() > cfg.skip_traj:
             continue
-        prev_NNi = -1
-        prev_NNo = -1
+        prev_NNi, prev_NNo = -1, -1
         traj = exploration_buffer.get_traj(traj_idx)
         for i in range(0, exploration_buffer.traj_len, cfg.skip):
             e = explr_embs[traj_idx][i].unsqueeze(0)
-            novelty, NNi, NNo = memory.compute_novelty(model, e)
-            if novelty > 0:
+            novelty_o, NNo = memory.compute_novelty(model, e)
+            if cfg.directed:
+                novelty_i, NNi = memory.compute_novelty(model, e, incoming_dir=True)
+            else:
+                novelty_i, NNi = novelty_o, NNo
+
+            if novelty_o > 0 and novelty_i > 0:
                 x = torch.from_numpy(traj["obs"][i]).to(device)
                 NN = memory.add(x, traj["state"][i], e)
                 NNi, NNo = NN, NN
             memory.add_edge(prev_NNi, prev_NNo, NNi, NNo)
-            prev_NNi = NNi
-            prev_NNo = NNo
+            prev_NNi, prev_NNo = NNi, NNo
 
     memory.adj_matrix = memory.adj_matrix[:len(memory), :len(memory)]
+
+    # make sure any memory node can be reached from any other
+    # TODO: fix it for directed graph
+    # memory.connect_graph(model)
+
     memory.compute_dist()
     return memory
 
@@ -119,12 +127,16 @@ def embed_expl_buffer(exploration_buffer, model, device):
 def compute_NN(explr_embs, model, memory, device):
     num_trajs, traj_len = explr_embs.size()[:2]
     memory.embs = memory.embs.to(device)
-    NN = np.zeros((num_trajs, traj_len), dtype=int)
+    NN = {"outgoing": np.zeros((num_trajs, traj_len), dtype=int)}
+    if memory.cfg.directed:
+        NN["incoming"] = np.zeros((num_trajs, traj_len), dtype=int)
     bsz = memory.cfg.NN_batch_size
     for traj_idx in tqdm(range(num_trajs), desc="computing NN"):
         for i in range(0, traj_len, bsz):
             j = min(i + bsz, traj_len)
-            NN[traj_idx][i:j] = memory.get_batch_NN(model, explr_embs[traj_idx][i:j])
+            NN["outgoing"][traj_idx][i:j] = memory.get_batch_NN(model, explr_embs[traj_idx][i:j])
+            if memory.cfg.directed:
+                NN["incoming"][traj_idx][i:j] = memory.get_batch_NN(model, explr_embs[traj_idx][i:j], incoming_dir=True)
     return NN
 
 
@@ -166,7 +178,9 @@ def fill_replay_buffer(
             g_emb.append(explr_embs[g1, g2])
             reward = 0  # will compute it later in parallel
         elif cfg.main.reward == "graph":
-            reward = -graph_dist[NN[s1, s2 + 1], NN[g1, g2]]
+            s_NN = NN["outgoing"][s1, s2 + 1]
+            g_NN = NN["incoming"][g1, g2]
+            reward = -graph_dist[s_NN, g_NN]
         else:
             raise ValueError()
         replay_buffer.push(
@@ -195,8 +209,8 @@ def save(save_dir, model, memory, NN):
     memory_path = os.path.join(save_dir, "memory.npy")
     memory.save(memory_path)
 
-    NN_path = os.path.join(save_dir, "NN.npy")
-    np.save(NN_path, NN)
+    NN_path = os.path.join(save_dir, "NN.npz")
+    np.savez(NN_path, **NN)
 
 
 def load(save_dir, memory, model=None):
@@ -214,7 +228,7 @@ def load(save_dir, memory, model=None):
     else:
         print("memory path not found")
 
-    NN_path = os.path.join(save_dir, "NN.npy")
+    NN_path = os.path.join(save_dir, "NN.npz")
     if os.path.exists(NN_path):
         NN = np.load(NN_path)
     else:

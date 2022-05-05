@@ -91,7 +91,7 @@ rnet:
         thresh: 0
         capacity: 500
         skip: 1
-        NN_batch_size: 1
+        NN_batch_size: 1001
         skip_traj: 0.05 #percentage of trajectories NOT to skip
         directed: false
 

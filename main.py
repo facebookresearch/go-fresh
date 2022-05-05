@@ -28,7 +28,6 @@ def train_memory(cfg, model, explr_embs, expl_buffer, space_info, device):
     memory = build_memory(
         cfg.rnet.memory, explr_embs, space_info, model, expl_buffer, device
     )
-    memory.compute_dist()
     return memory
 
 
@@ -132,14 +131,14 @@ def main(cfg):
 
     if cfg.main.reward in ["graph"]:
         # Nearest neigbhor
-        NN_path = path.join(cfg.main.logs_dir, "NN.npy")
+        NN_path = path.join(cfg.main.logs_dir, "NN.npz")
         if path.exists(NN_path):
             log.info(f"Loading NN from {NN_path}")
             NN = np.load(NN_path)
         else:
             log.info("Computing NN")
             NN = compute_NN(explr_embs, rnet_model, memory, device)
-            np.save(NN_path, NN)
+            np.savez(NN_path, **NN)
     else:
         NN = None
 
