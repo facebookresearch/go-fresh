@@ -117,6 +117,7 @@ def main(cfg):
         )
         memory.save(memory_path)
     log.info(f"Memory size: {len(memory)}")
+    log.info(f"Number of connected components: {memory.get_nb_connected_components()}")
 
     # Nearest neigbhor
     NN_path = path.join(cfg.main.logs_dir, "NN.npy")

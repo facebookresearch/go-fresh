@@ -98,12 +98,14 @@ class RNetMemory(GraphMemory):
                 )[:, 0]
         return rnet_vals.view(bsz, memsz).max(dim=1)[1].cpu()
 
+    def get_nb_connected_components(self, return_labels=False):
+        return csg.connected_components(
+                self.adj_matrix, directed=self.cfg.directed, return_labels=return_labels
+        )
+
     def connect_graph(self, rnet_model):
         while True:
-            n_components, labels = csg.connected_components(
-                self.adj_matrix, directed=self.cfg.directed, return_labels=True
-            )
-            print(f"number of connected components: {n_components}")
+            n_components, labels = self.get_nb_connected_components(return_labels=True)
             if n_components == 1:
                 break
             components_count = np.bincount(labels)
