@@ -55,16 +55,14 @@ class RNetMemory(GraphMemory):
         if self.cfg.directed:
             # both directions need to be novel
             rnet_values = self.compare_embeddings(e, rnet_model, both_dir=True)
-            NNi = torch.argmax(rnet_values[: len(self)]).item()
-            NNo = torch.argmax(rnet_values[len(self):]).item()
-            nov = -(
-                max(rnet_values[NNo + len(self)], rnet_values[NNi]) - self.cfg.thresh
-            ).item()
-            return nov, NNi, NNo
+            nov_o, NNo = torch.max(rnet_values[: len(self)], dim=0)
+            nov_i, NNi = torch.max(rnet_values[len(self):], dim=0)
+            nov = - (max(nov_o, nov_i) - self.cfg.thresh)
+            return nov.item(), NNi.item(), NNo.item()
         else:
             rnet_values = self.compare_embeddings(e, rnet_model)
-            argmax = torch.argmax(rnet_values).item()
-            return - (rnet_values[argmax] - self.cfg.thresh).item(), argmax, argmax
+            nov, NN = torch.max(rnet_values, dim=0).item()
+            return - (nov - self.cfg.thresh).item(), NN, NN
 
     def compute_rnet_values(self, rnet_model):
         rnet_values = np.zeros((len(self), len(self)))
