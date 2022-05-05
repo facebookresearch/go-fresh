@@ -120,11 +120,11 @@ def compute_NN(explr_embs, model, memory, device):
     num_trajs, traj_len = explr_embs.size()[:2]
     memory.embs = memory.embs.to(device)
     NN = np.zeros((num_trajs, traj_len), dtype=int)
-    skip = memory.cfg.skip
+    bsz = memory.cfg.NN_batch_size
     for traj_idx in tqdm(range(num_trajs), desc="computing NN"):
-        for i in range(0, traj_len, skip):
-            j = i + skip // 2 if i + skip // 2 < traj_len else i
-            NN[traj_idx][i:i + skip] = memory.get_NN(model, explr_embs[traj_idx][j])[0]
+        for i in range(0, traj_len, bsz):
+            j = min(i + bsz, traj_len)
+            NN[traj_idx][i:j] = memory.get_batch_NN(model, explr_embs[traj_idx][i:j])
     return NN
 
 
@@ -203,13 +203,23 @@ def load(save_dir, memory, model=None):
     print("Loading rnet objects from ", save_dir)
     if model is not None:
         model_path = os.path.join(save_dir, "model.pth")
-        model.load(model_path)
+        if os.path.exists(model_path):
+            model.load(model_path)
+        else:
+            print("model path not found")
 
     memory_path = os.path.join(save_dir, "memory.npy")
-    memory.load(memory_path)
+    if os.path.exists(memory_path):
+        memory.load(memory_path)
+    else:
+        print("memory path not found")
 
     NN_path = os.path.join(save_dir, "NN.npy")
-    NN = np.load(NN_path)
+    if os.path.exists(NN_path):
+        NN = np.load(NN_path)
+    else:
+        print("NN path not found")
+        NN = None
 
     if model is None:
         return memory, NN
