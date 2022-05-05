@@ -52,6 +52,7 @@ class RNetMemory(GraphMemory):
 
     def compute_novelty(self, rnet_model, e):
         assert not rnet_model.training
+        rnet_values = self.compare_embeddings(e, rnet_model, both_dir=self.cfg.directed)
         if self.cfg.directed:
             # both directions need to be novel
             rnet_values = self.compare_embeddings(e, rnet_model, both_dir=True)
@@ -71,11 +72,31 @@ class RNetMemory(GraphMemory):
         return rnet_values
 
     def get_NN(self, rnet_model, e, mask=None):
-        rnet_values = self.compare_embeddings(e, rnet_model)
+        rnet_values = self.compare_embeddings(e, rnet_model, both_dir=self.cfg.directed)
         if mask is not None:
             rnet_values[mask] = -np.inf
-        argmax = torch.argmax(rnet_values).item()
-        return argmax, rnet_values[argmax].item()
+        NN = torch.argmax(rnet_values).item() % len(self)
+        return NN, rnet_values[NN].item()
+
+    def get_batch_NN(self, rnet_model, e):
+        bsz = e.size(0)
+        memsz = len(self)
+        batch_e = torch.repeat_interleave(e, memsz, dim=0)
+        memory_batch = self.embs[: memsz].repeat(bsz, 1)
+        if self.cfg.directed:
+            left_batch = torch.cat((batch_e, memory_batch))
+            right_batch = torch.cat((memory_batch, batch_e))
+            with torch.no_grad():
+                rnet_vals = rnet_model.compare_embeddings(
+                    left_batch, right_batch, batchwise=True
+                )[:, 0]
+            rnet_vals = torch.max(rnet_vals[: memsz * bsz], rnet_vals[memsz * bsz:])
+        else:
+            with torch.no_grad():
+                rnet_vals = rnet_model.compare_embeddings(
+                    batch_e, memory_batch, batchwise=True
+                )[:, 0]
+        return rnet_vals.view(bsz, memsz).max(dim=1)[1].cpu()
 
     def connect_graph(self, rnet_model):
         while True:

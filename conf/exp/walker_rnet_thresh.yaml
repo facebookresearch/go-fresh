@@ -8,7 +8,7 @@ rnet:
         neg_thresh: 0 
         symmetric: False
     model:
-        remove_velocity: False 
+        remove_velocity: False
     memory:
         skip_traj: 0.01 
         capacity: 1000 
