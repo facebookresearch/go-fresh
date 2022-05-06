@@ -125,7 +125,9 @@ class RNetModel(nn.Module):
         dist = x_norm + y_norm - 2.0 * torch.mm(x, y_t)
         return torch.clamp(dist, 0.0, np.inf)
 
-    def compare_embeddings(self, e1, e2, equal=False, batchwise=False, reverse_dir=False):
+    def compare_embeddings(
+        self, e1, e2, equal=False, batchwise=False, reverse_dir=False
+    ):
         if self.comparator_type == "dot":
             if batchwise:
                 logits = torch.bmm(e1.unsqueeze(1), e2.unsqueeze(2))[:, :, 0]

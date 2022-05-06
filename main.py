@@ -32,7 +32,16 @@ def train_memory(cfg, model, explr_embs, expl_buffer, space_info, device):
 
 
 def train_policy(
-    cfg, expl_buffer, explr_embs, rnet_model, memory, NN, space_info, device, log, tb_log
+    cfg,
+    expl_buffer,
+    explr_embs,
+    rnet_model,
+    memory,
+    NN,
+    space_info,
+    device,
+    log,
+    tb_log
 ):
     kwargs = {}
     if cfg.main.reward == "graph":
@@ -123,7 +132,9 @@ def main(cfg):
             )
             memory.save(memory_path)
         log.info(f"Memory size: {len(memory)}")
-        log.info(f"Number of connected components: {memory.get_nb_connected_components()}")
+        log.info(
+            f"Number of connected components: {memory.get_nb_connected_components()}"
+        )
     else:
         rnet_model = None
         explr_embs = None

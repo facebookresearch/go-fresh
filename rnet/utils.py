@@ -134,9 +134,13 @@ def compute_NN(explr_embs, model, memory, device):
     for traj_idx in tqdm(range(num_trajs), desc="computing NN"):
         for i in range(0, traj_len, bsz):
             j = min(i + bsz, traj_len)
-            NN["outgoing"][traj_idx][i:j] = memory.get_batch_NN(model, explr_embs[traj_idx][i:j])
+            NN["outgoing"][traj_idx][i:j] = memory.get_batch_NN(
+                model, explr_embs[traj_idx][i:j]
+            )
             if memory.cfg.directed:
-                NN["incoming"][traj_idx][i:j] = memory.get_batch_NN(model, explr_embs[traj_idx][i:j], incoming_dir=True)
+                NN["incoming"][traj_idx][i:j] = memory.get_batch_NN(
+                    model, explr_embs[traj_idx][i:j], incoming_dir=True
+                )
     return NN
 
 

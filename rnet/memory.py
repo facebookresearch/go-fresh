@@ -40,7 +40,10 @@ class RNetMemory(GraphMemory):
         emb_batch = emb.expand(len(self), -1)
         with torch.no_grad():
             return rnet_model.compare_embeddings(
-                emb_batch, self.embs[: len(self)], batchwise=True, reverse_dir=incoming_dir
+                emb_batch,
+                self.embs[: len(self)],
+                batchwise=True,
+                reverse_dir=incoming_dir
             )[:, 0]
 
     def compute_novelty(self, rnet_model, e, incoming_dir=False):
