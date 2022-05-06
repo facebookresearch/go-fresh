@@ -85,13 +85,15 @@ class RNetMemory(GraphMemory):
             return_labels=return_labels,
         )
 
-    def get_component_shortest_edge(self, component_idx, rnet_model, incoming_dir=False):
+    def get_component_shortest_edge(self, component_idx, rnet_model, mask=None, incoming_dir=False):
         """ given a set nodes, find a node has the nearest edge outside of the set """
+        if mask is None:
+            mask = component_idx
         max_value = -np.inf
         edge = None
         for i in range(len(component_idx)):
             argmax, value = self.get_NN(
-                rnet_model, self.embs[component_idx[i]], mask=component_idx, incoming_dir=incoming_dir
+                rnet_model, self.embs[component_idx[i]], mask=mask, incoming_dir=incoming_dir
             )
             if value > max_value:
                 max_value = value
@@ -115,16 +117,13 @@ class RNetMemory(GraphMemory):
                 self.add_edge(*edge_to_add)
             else:
                 # need to figure out which direction needs to be added
-                edge_o, val_o = self.get_component_shortest_edge(component_idx, rnet_model)
-                edge_i, val_i = self.get_component_shortest_edge(component_idx, rnet_model, incoming_dir=True)
                 self.compute_dist()
-                # no need to add edge if they are already connected in that direction
-                if self.dist[edge_o[0], edge_o[1]] < np.inf:
-                    val_o = -np.inf
-                if self.dist[edge_i[0], edge_i[1]] < np.inf:
-                    val_i = -np.inf
-                if val_o == -np.inf and val_i == -np.inf:
-                    assert False, "this shouldn't happen"
+                # maskout nodes that are already connected in that direction
+                mask_o = np.where(self.dist[component_idx[0], :] < np.inf)[0]
+                mask_i = np.where(self.dist[:, component_idx[0]] < np.inf)[0]
+
+                edge_o, val_o = self.get_component_shortest_edge(component_idx, rnet_model, mask=mask_o)
+                edge_i, val_i = self.get_component_shortest_edge(component_idx, rnet_model, mask=mask_i, incoming_dir=True)
                 if val_o > val_i:
                     self.add_edge(*edge_o)
                 else:
