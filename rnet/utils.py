@@ -88,7 +88,7 @@ def build_memory(cfg, explr_embs, space_info, model, exploration_buffer, device)
         prev_NNi, prev_NNo = -1, -1
         traj = exploration_buffer.get_traj(traj_idx)
         for i in range(0, exploration_buffer.traj_len, cfg.skip):
-            e = explr_embs[traj_idx][i].unsqueeze(0)
+            e = explr_embs[traj_idx, i].unsqueeze(0)
             novelty_o, NNo = memory.compute_novelty(model, e)
             if cfg.directed:
                 novelty_i, NNi = memory.compute_novelty(model, e, incoming_dir=True)
@@ -134,12 +134,12 @@ def compute_NN(explr_embs, model, memory, device):
     for traj_idx in tqdm(range(num_trajs), desc="computing NN"):
         for i in range(0, traj_len, bsz):
             j = min(i + bsz, traj_len)
-            NN["outgoing"][traj_idx][i:j] = memory.get_batch_NN(
-                model, explr_embs[traj_idx][i:j]
+            NN["outgoing"][traj_idx, i:j] = memory.get_batch_NN(
+                model, explr_embs[traj_idx, i:j]
             )
             if memory.cfg.directed:
-                NN["incoming"][traj_idx][i:j] = memory.get_batch_NN(
-                    model, explr_embs[traj_idx][i:j], incoming_dir=True
+                NN["incoming"][traj_idx, i:j] = memory.get_batch_NN(
+                    model, explr_embs[traj_idx, i:j], incoming_dir=True
                 )
     return NN
 
@@ -157,8 +157,6 @@ def fill_replay_buffer(
     rnet_model=None,
     explr_embs=None
 ):
-    print("filling replay buffer")
-
     if cfg.main.reward == "rnet":
         # will compute rewards in parallel for efficiency
         assert len(replay_buffer) == 0
@@ -172,10 +170,10 @@ def fill_replay_buffer(
             g_obs = exploration_buffer.get_obs(g1, g2)
         s_obs, s1, s2 = exploration_buffer.get_random_obs()
         state = {"obs": s_obs, "goal_obs": g_obs}
-        next_state = {"obs": exploration_buffer.obss[s1][s2 + 1], "goal_obs": g_obs}
+        next_state = {"obs": exploration_buffer.obss[s1, s2 + 1], "goal_obs": g_obs}
         if cfg.main.reward == "oracle":
             reward = oracle_reward(
-                exploration_buffer.states[s1][s2 + 1], exploration_buffer.states[g1][g2]
+                exploration_buffer.states[s1, s2 + 1], exploration_buffer.states[g1, g2]
             )
         elif cfg.main.reward == "rnet":
             s_emb.append(explr_embs[s1, s2 + 1])
@@ -191,7 +189,7 @@ def fill_replay_buffer(
         else:
             raise ValueError()
         replay_buffer.push(
-            state, exploration_buffer.actions[s1][s2 + 1], reward, next_state
+            state, exploration_buffer.actions[s1, s2 + 1], reward, next_state
         )
 
     if cfg.main.reward == "rnet":
