@@ -183,7 +183,10 @@ def fill_replay_buffer(
             reward = 0  # will compute it later in parallel
         elif cfg.main.reward == "graph":
             s_NN = NN["outgoing"][s1, s2 + 1]
-            g_NN = NN["incoming"][g1, g2]
+            if cfg.rnet.memory.directed:
+                g_NN = NN["incoming"][g1, g2]
+            else:
+                g_NN = NN["outgoing"][g1, g2]
             reward = -graph_dist[s_NN, g_NN]
         else:
             raise ValueError()
