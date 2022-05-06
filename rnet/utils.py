@@ -99,14 +99,13 @@ def build_memory(cfg, explr_embs, space_info, model, exploration_buffer, device)
                 x = torch.from_numpy(traj["obs"][i]).to(device)
                 NN = memory.add(x, traj["state"][i], e)
                 NNi, NNo = NN, NN
-            memory.add_edge(prev_NNi, prev_NNo, NNi, NNo)
+            memory.transition2edges(prev_NNi, prev_NNo, NNi, NNo)
             prev_NNi, prev_NNo = NNi, NNo
 
     memory.adj_matrix = memory.adj_matrix[:len(memory), :len(memory)]
 
     # make sure any memory node can be reached from any other
-    # TODO: fix it for directed graph
-    # memory.connect_graph(model)
+    memory.connect_graph(model)
 
     memory.compute_dist()
     return memory
