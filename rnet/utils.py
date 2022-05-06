@@ -197,7 +197,7 @@ def fill_replay_buffer(
         g_emb = torch.stack(g_emb)
         with torch.no_grad():
             rval = rnet_model.compare_embeddings(s_emb, g_emb, batchwise=True)
-        rewards = rval[:, 0]
+        rewards = rval[:, 0] * cfg.replay_buffer.reward_scaling
         assert rewards.size(0) == len(replay_buffer)
         replay_buffer.rewards[:, 0].copy_(rewards)
 
