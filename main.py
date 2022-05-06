@@ -145,7 +145,7 @@ def main(cfg):
         NN_path = path.join(cfg.main.logs_dir, "NN.npz")
         if path.exists(NN_path):
             log.info(f"Loading NN from {NN_path}")
-            NN = np.load(NN_path)
+            NN = dict(np.load(NN_path))
         else:
             log.info("Computing NN")
             NN = compute_NN(explr_embs, rnet_model, memory, device)
