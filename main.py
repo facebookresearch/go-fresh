@@ -63,8 +63,10 @@ def train_policy(
 
         # TRAIN
         replay_buffer.flush()
+        log.info("filling replay buffer")
         rnet_utils.fill_replay_buffer(replay_buffer, expl_buffer, cfg, **kwargs)
 
+        log.info("train one epoch")
         train_stats = agent.train_one_epoch(replay_buffer)
         log.info(
             "train " + " - ".join([f"{k}: {v:.2f}" for k, v in train_stats.items()])
