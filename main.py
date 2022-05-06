@@ -1,4 +1,4 @@
-from os import path
+from os import path, system
 import numpy as np
 import torch
 import hydra
@@ -95,6 +95,17 @@ def main(cfg):
     tb_log = Logger(cfg.main.logs_dir, cfg)
     log.info(f"exp name: {cfg.main.name}")
 
+    # setup paths and load
+    rnet_path = path.join(cfg.main.logs_dir, "model.pth")
+    memory_path = path.join(cfg.main.logs_dir, "memory.npy")
+    NN_path = path.join(cfg.main.logs_dir, "NN.npz")
+    if cfg.main.load_from_dir is not None:
+        for file in ["model.pth", "memory.npy", "NN.npz"]:
+            load_path = path.join(cfg.main.load_from_dir, file)
+            if path.exists(load_path):
+                log.info(f"copying from {load_path}")
+                system(f"cp {load_path} {cfg.main.logs_dir}/")
+
     device = torch.device("cuda")
     space_info = utils.get_space_info(cfg.env.obs, cfg.env.action_dim)
     expl_buffer = ExplorationBuffer(cfg.exploration_buffer, log)
@@ -103,7 +114,6 @@ def main(cfg):
         # RNet
         rnet_model = RNetModel(cfg.rnet.model, space_info).to(device)
         log.info(rnet_model)
-        rnet_path = path.join(cfg.main.logs_dir, "model.pth")
         if path.exists(rnet_path):
             log.info(f"Loading RNet from {rnet_path}")
             rnet_model.load(rnet_path)
@@ -115,7 +125,6 @@ def main(cfg):
         explr_embs = embed_expl_buffer(expl_buffer, rnet_model, device)
 
         # Memory and graph
-        memory_path = path.join(cfg.main.logs_dir, "memory.npy")
         if path.exists(memory_path):
             log.info(f"Loading memory from {memory_path}")
             memory = RNetMemory(
@@ -144,7 +153,6 @@ def main(cfg):
 
     if cfg.main.reward in ["graph"]:
         # Nearest neigbhor
-        NN_path = path.join(cfg.main.logs_dir, "NN.npz")
         if path.exists(NN_path):
             log.info(f"Loading NN from {NN_path}")
             NN = dict(np.load(NN_path))
