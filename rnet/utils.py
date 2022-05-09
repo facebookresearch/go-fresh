@@ -156,10 +156,10 @@ def fill_replay_buffer(
     rnet_model=None,
     explr_embs=None
 ):
-    if cfg.main.reward == "rnet":
+    if cfg.main.reward in ["rnet", "graph+"]:
         # will compute rewards in parallel for efficiency
         assert len(replay_buffer) == 0
-        s_emb, g_emb = [], []
+        s_emb, g_emb, mask = [], [], []
 
     while not replay_buffer.is_full():
         if cfg.train.goal_strat == "rb":
@@ -174,32 +174,39 @@ def fill_replay_buffer(
             reward = oracle_reward(
                 exploration_buffer.states[s1, s2 + 1], exploration_buffer.states[g1, g2]
             )
-        elif cfg.main.reward == "rnet":
+        if cfg.main.reward == ["rnet", "graph+"]:
             s_emb.append(explr_embs[s1, s2 + 1])
             g_emb.append(explr_embs[g1, g2])
-            reward = 0  # will compute it later in parallel
-        elif cfg.main.reward == "graph":
+            if cfg.main.reward == ["rnet"]:
+                reward = 0  # will compute it later in parallel
+                mask.append(True)
+        if cfg.main.reward in ["graph", "graph+"]:
             s_NN = NN["outgoing"][s1, s2 + 1]
             if cfg.rnet.memory.directed:
                 g_NN = NN["incoming"][g1, g2]
             else:
                 g_NN = NN["outgoing"][g1, g2]
             reward = -graph_dist[s_NN, g_NN]
-        else:
-            raise ValueError()
+            if cfg.main.reward == "graph+":
+                mask.append(s_NN == g_NN)
         replay_buffer.push(
             state, exploration_buffer.actions[s1, s2 + 1], reward, next_state
         )
 
-    if cfg.main.reward == "rnet":
+    if cfg.main.reward in ["rnet", "graph+"]:
         assert replay_buffer.is_full()
         s_emb = torch.stack(s_emb)
         g_emb = torch.stack(g_emb)
         with torch.no_grad():
             rval = rnet_model.compare_embeddings(s_emb, g_emb, batchwise=True)
-        rewards = rval[:, 0] * cfg.replay_buffer.reward_scaling
+        rewards = rval[:, 0]
+        if cfg.main.reward == "graph+":
+            rewards = torch.sigmoid(rewards) - 1
+        rewards *= cfg.replay_buffer.reward_scaling
         assert rewards.size(0) == len(replay_buffer)
-        replay_buffer.rewards[:, 0].copy_(rewards)
+        replay_buffer.rewards[:, 0].copy_(
+            replay_buffer.rewards[:, 0] + torch.tensor(mask) * rewards
+        )
 
 
 def save(save_dir, model, memory, NN):

@@ -44,10 +44,10 @@ def train_policy(
     tb_log
 ):
     kwargs = {}
-    if cfg.main.reward == "graph":
+    if cfg.main.reward in ["graph", "graph+"]:
         kwargs["NN"] = NN
         kwargs["graph_dist"] = memory.dist
-    elif cfg.main.reward == "rnet":
+    if cfg.main.reward in ["rnet", "graph+"]:
         kwargs["rnet_model"] = rnet_model
         kwargs["explr_embs"] = explr_embs
 
@@ -110,7 +110,7 @@ def main(cfg):
     space_info = utils.get_space_info(cfg.env.obs, cfg.env.action_dim)
     expl_buffer = ExplorationBuffer(cfg.exploration_buffer, log)
 
-    if cfg.main.reward in ["rnet", "graph"]:
+    if cfg.main.reward in ["rnet", "graph", "graph+"]:
         # RNet
         rnet_model = RNetModel(cfg.rnet.model, space_info).to(device)
         log.info(rnet_model)
@@ -151,7 +151,7 @@ def main(cfg):
         explr_embs = None
         memory = None
 
-    if cfg.main.reward in ["graph"]:
+    if cfg.main.reward in ["graph", "graph+"]:
         # Nearest neigbhor
         if path.exists(NN_path):
             log.info(f"Loading NN from {NN_path}")
