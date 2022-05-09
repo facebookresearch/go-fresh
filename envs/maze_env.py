@@ -243,7 +243,7 @@ class MazeWrapper(BaseWrapper):
         lines = []
         for i in range(len(memory)):
             for j in range(i):
-                if memory.adj_matrix[i, j]:
+                if memory.adj_matrix[i, j] or memory.adj_matrix[j, i]:
                     lines.append([states[i, :2], states[j, :2]])
         lc = mc.LineCollection(lines, color="gray", alpha=0.5)
         ax.add_collection(lc)
