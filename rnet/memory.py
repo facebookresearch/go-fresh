@@ -1,6 +1,5 @@
 import numpy as np
 import torch
-import scipy.sparse.csgraph as csg
 
 import utils
 
@@ -76,14 +75,6 @@ class RNetMemory(GraphMemory):
                 batch_e, memory_batch, batchwise=True, reverse_dir=incoming_dir
             )[:, 0]
         return rnet_vals.view(bsz, memsz).max(dim=1)[1].cpu()
-
-    def get_nb_connected_components(self, return_labels=False):
-        return csg.connected_components(
-            self.adj_matrix,
-            directed=self.cfg.directed,
-            connection="strong",
-            return_labels=return_labels,
-        )
 
     def connect_graph(self, rnet_model):
         while True:

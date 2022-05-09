@@ -109,6 +109,14 @@ class GraphMemory(Memory):
         super().flush()
         self.adj_matrix = np.zeros((self.cfg.capacity, self.cfg.capacity), dtype=bool)
 
+    def get_nb_connected_components(self, return_labels=False):
+        return csg.connected_components(
+            self.adj_matrix,
+            directed=self.cfg.directed,
+            connection="strong",
+            return_labels=return_labels,
+        )
+
     def compute_dist(self):
         self.dist, self.pred = csg.floyd_warshall(
             self.adj_matrix, return_predecessors=True, directed=self.cfg.directed
