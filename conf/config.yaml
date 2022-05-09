@@ -5,6 +5,7 @@ main:
     save_interval: 100
     reward: graph  # how reward is computed. options: graph, rnet, oracle
     run: #dummy variable for several runs
+    load_from_dir:  # load RNet model, memory and NN from a given directory
 
 env:
     id: maze_U4rooms

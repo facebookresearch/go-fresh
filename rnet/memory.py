@@ -76,6 +76,29 @@ class RNetMemory(GraphMemory):
             )[:, 0]
         return rnet_vals.view(bsz, memsz).max(dim=1)[1].cpu()
 
+    def get_component_shortest_edge(
+        self, component_idx, rnet_model, mask=None, incoming_dir=False
+    ):
+        """ given a set nodes, find a node has the nearest edge outside of the set """
+        if mask is None:
+            mask = component_idx
+        max_value = -np.inf
+        edge = None
+        for i in range(len(component_idx)):
+            argmax, value = self.get_NN(
+                rnet_model,
+                self.embs[component_idx[i]],
+                mask=mask,
+                incoming_dir=incoming_dir
+            )
+            if value > max_value:
+                max_value = value
+                if incoming_dir:
+                    edge = (argmax, component_idx[i])
+                else:
+                    edge = (component_idx[i], argmax)
+        return edge, max_value
+
     def connect_graph(self, rnet_model):
         while True:
             n_components, labels = self.get_nb_connected_components(return_labels=True)
@@ -84,15 +107,31 @@ class RNetMemory(GraphMemory):
             components_count = np.bincount(labels)
             component_to_drop = np.argmin(components_count)
             component_idx = np.where(labels == component_to_drop)[0]
-            max_value = -np.inf
-            for i in range(len(component_idx)):
-                argmax, value = self.get_NN(
-                    rnet_model, self.embs[component_idx[i]], mask=component_idx
+            print(
+                f"There are {n_components} components. Connecting {component_to_drop}."
+            )
+            if not self.cfg.directed:
+                edge_to_add, _ = self.get_component_shortest_edge(
+                    component_idx, rnet_model
                 )
-                if value > max_value:
-                    max_value = value
-                    edge_to_add = (component_idx[i], argmax)
-            self.add_edge(*edge_to_add)
+                self.add_edge(*edge_to_add)
+            else:
+                # need to figure out which direction needs to be added
+                self.compute_dist()
+                # maskout nodes that are already connected in that direction
+                mask_o = np.where(self.dist[component_idx[0], :] < np.inf)[0]
+                mask_i = np.where(self.dist[:, component_idx[0]] < np.inf)[0]
+
+                edge_o, val_o = self.get_component_shortest_edge(
+                    component_idx, rnet_model, mask=mask_o
+                )
+                edge_i, val_i = self.get_component_shortest_edge(
+                    component_idx, rnet_model, mask=mask_i, incoming_dir=True
+                )
+                if val_o > val_i:
+                    self.add_edge(*edge_o)
+                else:
+                    self.add_edge(*edge_i)
 
     def dict_to_save(self):
         to_save = super().dict_to_save()

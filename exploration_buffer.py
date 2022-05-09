@@ -31,6 +31,7 @@ class ExplorationBuffer(object):
         ep_files = [os.path.join(data_dir, f) for f in os.listdir(data_dir)]
         # exclude hidden files
         ep_files = [f for f in ep_files if not os.path.basename(f).startswith(".")]
+        ep_files.sort()  # make sure ordering is always the same
         x_list = self.parallel_read(ep_files, num_procs=self.cfg.num_procs)
         self.obss = x_list["observation"]
         if "physics" in x_list:
