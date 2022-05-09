@@ -6,6 +6,7 @@ main:
     reward: graph  # how reward is computed. options: graph, rnet, oracle
     run: #dummy variable for several runs
     load_from_dir:  # load RNet model, memory and NN from a given directory
+    train_until: policy  # specify which step to end training. Steps are: rnet -> memory -> NN -> policy
 
 env:
     id: maze_U4rooms
