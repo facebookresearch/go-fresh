@@ -1,5 +1,4 @@
 import dmc2gym
-import numpy as np
 
 from gym.wrappers.time_limit import TimeLimit
 
@@ -31,13 +30,7 @@ class WalkerWrapper(BaseWrapper):
         ).transpose((2, 0, 1))
 
     def oracle_distance(self, x1, x2):
-        def get_su(_goal):
-            dist = np.abs(x1 - _goal)
-            dist = dist[..., [0, 2, 3, 4, 6, 7]]
-            dist[..., 1] = utils.shortest_angle(dist[..., 1])
-            return dist.max(-1)
-
-        return min(get_su(x2), get_su(x2[..., [0, 1, 2, 6, 7, 8, 3, 4, 5]]))
+        return utils.oracle_distance(x1, x2)
 
     def process_info(self, info, metrics):
         super().process_info(info, metrics)
