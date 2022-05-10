@@ -3,7 +3,7 @@ main:
     suffix:
     logs_dir: /checkpoint/${env:USER}/offline-gcrl/logs/${main.name}  # store all model files
     save_interval: 100
-    reward: graph  # how reward is computed. options: graph+, graph, rnet, oracle
+    reward: graph  # how reward is computed. options: graph_sig, graph, rnet, oracle
     run: #dummy variable for several runs
     load_from_dir:  # load RNet model, memory and NN from a given directory
 
