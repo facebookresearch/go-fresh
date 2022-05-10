@@ -128,7 +128,7 @@ def main(cfg):
     if cfg.main.train_until == "rnet":
         return
 
-    if cfg.main.reward in ["rnet", "graph"]:
+    if cfg.main.reward in ["rnet", "graph", "graph_sig"]:
         explr_embs = embed_expl_buffer(expl_buffer, rnet_model, device)
         # Memory and graph
         if path.exists(memory_path):
