@@ -1,13 +1,17 @@
 import os
 import random
+import logging
 import numpy as np
 import multiprocessing as mp
 
 
+log = logging.getLogger(__name__)
+
+
 class ExplorationBuffer(object):
-    def __init__(self, cfg, log=None):
+    def __init__(self, cfg):
         self.cfg = cfg
-        self.print_fn = print if log is None else log.info
+        self.print_fn = log.info
         self.load_data(cfg.data_dir)
 
     def read_x(self, path):

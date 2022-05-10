@@ -19,6 +19,9 @@ from rnet.dataset import RNetPairsSplitDataset
 from rnet.utils import build_memory, compute_NN, embed_expl_buffer
 
 
+log = logging.getLogger(__name__)
+
+
 def train_rnet(cfg, model, expl_buffer, tb_log, device):
     dataset = RNetPairsSplitDataset(cfg.rnet.dataset, expl_buffer)
     _ = rnet_utils.train(cfg.rnet.train, model, dataset, device, tb_log)
@@ -40,7 +43,6 @@ def train_policy(
     NN,
     space_info,
     device,
-    log,
     tb_log
 ):
     kwargs = {}
@@ -53,7 +55,7 @@ def train_policy(
 
     replay_buffer = ReplayBuffer(cfg.replay_buffer, space_info, device)
 
-    agent = sac.SAC(cfg.sac, space_info, device, log)
+    agent = sac.SAC(cfg.sac, space_info, device)
 
     procs, buffers, barriers, n_eval_done, info_keys = eval.start_procs(cfg, space_info)
 
@@ -91,7 +93,6 @@ def train_policy(
 
 @hydra.main(config_path="conf", config_name="config.yaml")
 def main(cfg):
-    log = logging.getLogger(__name__)
     tb_log = Logger(cfg.main.logs_dir, cfg)
     log.info(f"exp name: {cfg.main.name}")
 
@@ -108,7 +109,7 @@ def main(cfg):
 
     device = torch.device("cuda")
     space_info = utils.get_space_info(cfg.env.obs, cfg.env.action_dim)
-    expl_buffer = ExplorationBuffer(cfg.exploration_buffer, log)
+    expl_buffer = ExplorationBuffer(cfg.exploration_buffer)
 
     if cfg.main.reward in ["rnet", "graph", "graph_sig"]:
         # RNet
@@ -185,7 +186,6 @@ def main(cfg):
         NN=NN,
         space_info=space_info,
         device=device,
-        log=log,
         tb_log=tb_log,
     )
 

@@ -214,7 +214,7 @@ def fill_replay_buffer(
         rewards = rval[:, 0]
         assert rewards.size(0) == len(replay_buffer)
         if cfg.main.reward == "graph_sig":
-            rewards = torch.sigmoid(rewards) - 1
+            rewards = torch.sigmoid(rewards / cfg.main.reward_sigm_temp) - 1
         rewards *= cfg.replay_buffer.reward_scaling
         rewards += replay_buffer.rewards[:, 0]
         replay_buffer.rewards[:, 0].copy_(rewards)

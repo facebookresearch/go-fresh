@@ -7,6 +7,7 @@ main:
     run: #dummy variable for several runs
     load_from_dir:  # load RNet model, memory and NN from a given directory
     train_until: policy  # specify which step to end training. Steps are: rnet -> memory -> NN -> policy
+    reward_sigm_temp: 1.0  # temperature for sigmoid reward
 
 env:
     id: maze_U4rooms
@@ -108,10 +109,10 @@ hydra:
         partition: learnlab
         name: ${main.name}
 
-    job_logging:
-        formatters:
-            simple:
-                format: '[%(levelname)s] - %(message)s'
+    # job_logging:
+    #     formatters:
+    #         simple:
+    #             format: '[%(levelname)s] - %(message)s'
 
     sweep:
         dir: /checkpoint/${env:USER}/offline-gcrl/logs/multirun/${main.name}

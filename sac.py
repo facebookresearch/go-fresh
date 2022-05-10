@@ -1,4 +1,5 @@
 import os
+import logging
 import torch
 
 import torch.nn.functional as F
@@ -6,6 +7,9 @@ import numpy as np
 from torch.optim import Adam
 
 from model import GaussianPolicy, QNetwork, DeterministicPolicy
+
+
+log = logging.getLogger(__name__)
 
 
 def soft_update(target, source, tau):
@@ -19,9 +23,8 @@ def hard_update(target, source):
 
 
 class SAC(object):
-    def __init__(self, cfg, space_info, device, log):
+    def __init__(self, cfg, space_info, device):
         self.cfg = cfg
-        self.log = log
         self.space_info = space_info
         self.alpha = cfg.optim.entropy.alpha
         self.device = device
@@ -175,7 +178,7 @@ class SAC(object):
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
         save_path = os.path.join(save_dir, f"checkpoint_{epoch}.pth")
-        self.log.info("Saving agent to {}".format(save_path))
+        log.info("Saving agent to {}".format(save_path))
         torch.save(
             {
                 "policy_state_dict": self.policy.state_dict(),
