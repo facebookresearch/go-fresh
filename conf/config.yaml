@@ -40,6 +40,7 @@ eval:
     num_episodes: 500
     num_procs: 10
     goal_idx:
+    interval_epochs: 1  # run eval every K epochs
 
 sac:
     policy:

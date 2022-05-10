@@ -78,11 +78,12 @@ def train_policy(
         tb_log.add_stats(train_stats, epoch, "train")
 
         # EVAL
-        eval_stats = eval.run(
-            agent, cfg.eval.num_episodes, buffers, barriers, n_eval_done, info_keys
-        )
-        log.info("eval " + " - ".join([f"{k}: {v:.2f}" for k, v in eval_stats.items()]))
-        tb_log.add_stats(eval_stats, epoch, "eval")
+        if epoch % cfg.eval.interval_epochs == 0:
+            eval_stats = eval.run(
+                agent, cfg.eval.num_episodes, buffers, barriers, n_eval_done, info_keys
+            )
+            log.info("eval " + " - ".join([f"{k}: {v:.2f}" for k, v in eval_stats.items()]))
+            tb_log.add_stats(eval_stats, epoch, "eval")
 
         if epoch % cfg.main.save_interval == 0:
             agent.save_checkpoint(cfg.main.logs_dir, epoch)
