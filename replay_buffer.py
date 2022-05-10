@@ -63,3 +63,9 @@ class ReplayBuffer(object):
 
     def __len__(self):
         return self.capacity if self.full else self.idx
+
+    def to(self, device):
+        self.states = self.states.to(device)
+        self.actions = self.actions.to(device)
+        self.rewards = self.rewards.to(device)
+        self.next_states = self.next_states.to(device)

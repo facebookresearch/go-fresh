@@ -170,6 +170,8 @@ def fill_replay_buffer(
     rnet_model=None,
     explr_embs=None
 ):
+    replay_buffer.to("cpu")
+
     if cfg.main.reward in ["rnet", "graph_sig"]:
         # will compute rewards in parallel for efficiency
         assert len(replay_buffer) == 0
@@ -204,6 +206,8 @@ def fill_replay_buffer(
         replay_buffer.push(
             state, exploration_buffer.actions[s1, s2 + 1], reward, next_state
         )
+
+    replay_buffer.to(replay_buffer.device)
 
     if cfg.main.reward in ["rnet", "graph_sig"]:
         assert replay_buffer.is_full()
