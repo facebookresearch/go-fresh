@@ -122,8 +122,14 @@ def main(cfg):
             train_rnet(cfg, rnet_model, expl_buffer, tb_log, device)
             log.info(f"Saving RNet to {rnet_path}")
             rnet_model.save(rnet_path)
-        explr_embs = embed_expl_buffer(expl_buffer, rnet_model, device)
+    else:
+        rnet_model = None
 
+    if cfg.main.train_until == "rnet":
+        return
+
+    if cfg.main.reward in ["rnet", "graph"]:
+        explr_embs = embed_expl_buffer(expl_buffer, rnet_model, device)
         # Memory and graph
         if path.exists(memory_path):
             log.info(f"Loading memory from {memory_path}")
@@ -147,9 +153,11 @@ def main(cfg):
             f"Number of connected components: {memory.get_nb_connected_components()}"
         )
     else:
-        rnet_model = None
         explr_embs = None
         memory = None
+
+    if cfg.main.train_until == "memory":
+        return
 
     if cfg.main.reward in ["graph", "graph_sig"]:
         # Nearest neigbhor
@@ -162,6 +170,9 @@ def main(cfg):
             np.savez(NN_path, **NN)
     else:
         NN = None
+
+    if cfg.main.train_until == "NN":
+        return
 
     # Policy
     log.info("Training policy")
