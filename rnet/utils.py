@@ -8,7 +8,7 @@ from tqdm import tqdm
 from rnet.memory import RNetMemory
 from envs.maze_utils import oracle_distance
 
-walker_goals = {8: (8291, 414), 10: (7080, 198)}
+walker_goals = {8: (8290, 414), 10: (7079, 198)}
 
 
 def train(cfg, model, dataset, device, tb_log=None):
