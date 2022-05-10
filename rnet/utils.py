@@ -6,7 +6,7 @@ import numpy as np
 from tqdm import tqdm
 
 from rnet.memory import RNetMemory
-from envs.maze_utils import oracle_distance
+from envs import maze_utils, walker_utils
 
 walker_goals = {8: (8290, 414), 10: (7079, 198)}
 
@@ -143,8 +143,22 @@ def compute_NN(explr_embs, model, memory, device):
     return NN
 
 
-def oracle_reward(x1, x2):
-    return -oracle_distance(x1, x2)
+def oracle_reward(cfg, x1, x2):
+    if cfg.env.id == 'maze_U4rooms':
+        oracle_distance = maze_utils.oracle_distance
+    elif cfg.env.id == 'walker':
+        oracle_distance = walker_utils.oracle_distance
+    else:
+        raise ValueError()
+
+    if cfg.main.reward == "oracle_sparse":
+        if oracle_distance(x1, x2) < cfg.env.success_thresh:
+            return 0
+        return -1
+    elif cfg.main.reward == "oracle_dense":
+        return -oracle_distance(x1, x2)
+    else:
+        raise ValueError()
 
 
 def fill_replay_buffer(
@@ -170,9 +184,11 @@ def fill_replay_buffer(
         s_obs, s1, s2 = exploration_buffer.get_random_obs()
         state = {"obs": s_obs, "goal_obs": g_obs}
         next_state = {"obs": exploration_buffer.obss[s1, s2 + 1], "goal_obs": g_obs}
-        if cfg.main.reward == "oracle":
+        if cfg.main.reward in ["oracle_dense", "oracle_sparse"]:
             reward = oracle_reward(
-                exploration_buffer.states[s1, s2 + 1], exploration_buffer.states[g1, g2]
+                cfg,
+                exploration_buffer.states[s1, s2 + 1],
+                exploration_buffer.states[g1, g2]
             )
         if cfg.main.reward in ["rnet", "graph_sig"]:
             s_emb.append(explr_embs[s1, s2 + 1])

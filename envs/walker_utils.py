@@ -14,3 +14,12 @@ def shortest_angle(angle):
     angle = angle % (2 * np.pi)
     angle[angle > np.pi] = 2 * np.pi - angle[angle > np.pi]
     return angle
+
+
+def oracle_distance(x1, x2):
+    def get_su(_goal):
+        dist = np.abs(x1 - _goal)
+        dist = dist[..., [0, 2, 3, 4, 6, 7]]
+        dist[..., 1] = shortest_angle(dist[..., 1])
+        return dist.max(-1)
+    return min(get_su(x2), get_su(x2[..., [0, 1, 2, 6, 7, 8, 3, 4, 5]]))
