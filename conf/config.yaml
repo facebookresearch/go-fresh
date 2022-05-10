@@ -49,7 +49,7 @@ sac:
             out_size: 16
             hidden_size: 64
             n_layers: 3
-            normalize: true
+            normalize: true  # divide the input by 255, except for FC head
     
     optim:
         lr: 0.001 
