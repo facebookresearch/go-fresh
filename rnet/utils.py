@@ -6,6 +6,7 @@ import numpy as np
 from tqdm import tqdm
 
 from rnet.memory import RNetMemory
+from envs import maze_utils, walker_utils
 
 walker_goals = {8: (8291, 414), 10: (7080, 198)}
 
@@ -144,9 +145,9 @@ def compute_NN(explr_embs, model, memory, device):
 
 def oracle_reward(cfg, x1, x2):
     if cfg.env.id == 'maze_U4rooms':
-        from envs.maze_utils import oracle_distance
+        oracle_distance = maze_utils.oracle_distance
     elif cfg.env.id == 'walker':
-        from envs.walker_utils import oracle_distance
+        oracle_distance = walker_utils.oracle_distance
     else:
         raise ValueError()
 
