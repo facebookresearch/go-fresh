@@ -1,0 +1,17 @@
+# @package _global_
+defaults:
+    - /env/maze_U4rooms
+
+rnet:
+    dataset:
+        thresh: 5 
+        neg_thresh: 0
+        symmetric: False
+    model:
+        remove_velocity: True
+    memory:
+        skip_traj: 0.01
+        capacity: 1000
+        directed: True
+    train:
+        num_epochs: 20
