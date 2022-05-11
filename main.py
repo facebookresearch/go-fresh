@@ -95,7 +95,7 @@ def train_policy(
             agent.save_checkpoint(cfg.main.logs_dir, epoch)
 
     for p in procs:
-        p.join()
+        p.join(1)
 
 
 @hydra.main(config_path="conf", config_name="config.yaml")
