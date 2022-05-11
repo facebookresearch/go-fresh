@@ -168,7 +168,8 @@ def fill_replay_buffer(
     NN=None,
     graph_dist=None,
     rnet_model=None,
-    explr_embs=None
+    explr_embs=None,
+    eval_goals=None
 ):
     replay_buffer.to("cpu")
 
@@ -180,9 +181,17 @@ def fill_replay_buffer(
     while not replay_buffer.is_full():
         if cfg.train.goal_strat == "rb":
             g_obs, g1, g2 = exploration_buffer.get_random_obs()
+            goal_embs = explr_embs
+            goal_states = exploration_buffer.states
+            goal_NN = NN
         elif cfg.train.goal_strat == "one_goal":
-            g1, g2 = walker_goals[cfg.eval.goal_idx]
-            g_obs = exploration_buffer.get_obs(g1, g2)
+            # g1, g2 = walker_goals[cfg.eval.goal_idx]
+            g1, g2 = 0, cfg.eval.goal_idx
+            # g_obs = exploration_buffer.get_obs(g1, g2)
+            g_obs = eval_goals["obs"][cfg.eval.goal_idx]
+            goal_embs = eval_goals["embs"]
+            goal_NN = eval_goals["NN"]
+            goal_states = None  # TODO
         s_obs, s1, s2 = exploration_buffer.get_random_obs()
         state = {"obs": s_obs, "goal_obs": g_obs}
         next_state = {"obs": exploration_buffer.obss[s1, s2 + 1], "goal_obs": g_obs}
@@ -190,18 +199,18 @@ def fill_replay_buffer(
             reward = oracle_reward(
                 cfg,
                 exploration_buffer.states[s1, s2 + 1],
-                exploration_buffer.states[g1, g2]
+                goal_states[g1, g2]
             )
         if cfg.main.reward in ["rnet", "graph_sig"]:
             s_emb.append(explr_embs[s1, s2 + 1])
-            g_emb.append(explr_embs[g1, g2])
+            g_emb.append(goal_embs[g1, g2])
             reward = 0  # will compute it later in parallel
         if cfg.main.reward in ["graph", "graph_sig"]:
             s_NN = NN["outgoing"][s1, s2 + 1]
             if cfg.rnet.memory.directed:
-                g_NN = NN["incoming"][g1, g2]
+                g_NN = goal_NN["incoming"][g1, g2]
             else:
-                g_NN = NN["outgoing"][g1, g2]
+                g_NN = goal_NN["outgoing"][g1, g2]
             reward = -graph_dist[s_NN, g_NN]
         replay_buffer.push(
             state, exploration_buffer.actions[s1, s2 + 1], reward, next_state
