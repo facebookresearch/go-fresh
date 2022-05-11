@@ -65,7 +65,9 @@ def train_policy(
         kwargs["rnet_model"] = rnet_model
         kwargs["explr_embs"] = explr_embs
     if cfg.train.goal_strat in ["one_goal", "all_goal"]:
-        kwargs["eval_goals"] = compute_NN_eval_goals(cfg, memory, space_info, rnet_model, device)
+        kwargs["eval_goals"] = compute_NN_eval_goals(
+            cfg, memory, space_info, rnet_model, device
+        )
 
     replay_buffer = ReplayBuffer(cfg.replay_buffer, space_info, device)
 
@@ -96,7 +98,9 @@ def train_policy(
             eval_stats = eval.run(
                 agent, cfg.eval.num_episodes, buffers, barriers, n_eval_done, info_keys
             )
-            log.info("eval " + " - ".join([f"{k}: {v:.2f}" for k, v in eval_stats.items()]))
+            log.info(
+                "eval " + " - ".join([f"{k}: {v:.2f}" for k, v in eval_stats.items()])
+            )
             tb_log.add_stats(eval_stats, epoch, "eval")
 
         if epoch % cfg.main.save_interval == 0:
