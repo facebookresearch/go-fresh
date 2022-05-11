@@ -8,6 +8,7 @@ main:
     load_from_dir:  # load RNet model, memory and NN from a given directory
     train_until: policy  # specify which step to end training. Steps are: rnet -> memory -> NN -> policy
     reward_sigm_temp: 1.0  # temperature for sigmoid reward
+    reward_sigm_weight: 1.0  # the weight of rnet sigmoid part in reward
 
 env:
     id: maze_U4rooms
