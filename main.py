@@ -64,7 +64,7 @@ def train_policy(
     if cfg.main.reward in ["rnet", "graph_sig"]:
         kwargs["rnet_model"] = rnet_model
         kwargs["explr_embs"] = explr_embs
-    if cfg.main.reward in ["rnet", "graph", "graph_sig"] and cfg.train.goal_strat == "one_goal":
+    if cfg.train.goal_strat in ["one_goal", "all_goal"]:
         kwargs["eval_goals"] = compute_NN_eval_goals(cfg, memory, space_info, rnet_model, device)
 
     replay_buffer = ReplayBuffer(cfg.replay_buffer, space_info, device)

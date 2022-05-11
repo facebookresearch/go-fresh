@@ -184,11 +184,14 @@ def fill_replay_buffer(
             goal_embs = explr_embs
             goal_states = exploration_buffer.states
             goal_NN = NN
-        elif cfg.train.goal_strat == "one_goal":
-            # g1, g2 = walker_goals[cfg.eval.goal_idx]
-            g1, g2 = 0, cfg.eval.goal_idx
-            # g_obs = exploration_buffer.get_obs(g1, g2)
-            g_obs = eval_goals["obs"][cfg.eval.goal_idx]
+        else:
+            if cfg.train.goal_strat == "one_goal":
+                goal_idx = cfg.eval.goal_idx
+            elif cfg.train.goal_strat == "all_goal":
+                ngoals = np.size(eval_goals["obs"], 0)
+                goal_idx = np.random.randint(ngoals)
+            g1, g2 = 0, goal_idx
+            g_obs = eval_goals["obs"][goal_idx]
             goal_embs = eval_goals["embs"]
             goal_NN = eval_goals["NN"]
             goal_states = None  # TODO
