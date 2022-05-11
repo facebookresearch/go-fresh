@@ -7,6 +7,7 @@ import logging
 import sac
 import eval
 import utils
+import envs
 
 import rnet.utils as rnet_utils
 
@@ -34,6 +35,17 @@ def train_memory(cfg, model, explr_embs, expl_buffer, space_info, device):
     return memory
 
 
+def compute_NN_eval_goals(cfg, memory, space_info, rnet_model, device):
+    env = envs.make_env(cfg.env, space_info)
+    goal_obs = env.get_goals()[f"{cfg.env.obs.type}_obs"]
+    goal_obs = np.float32(goal_obs)
+    goal_obs_pt = torch.from_numpy(goal_obs).to(device)
+    goal_embs = rnet_model.get_embedding(goal_obs_pt)  # ngoals x emb_dim
+    goal_embs = goal_embs.unsqueeze(0)
+    NN = compute_NN(goal_embs, rnet_model, memory, device)
+    return {"obs": goal_obs, "embs": goal_embs, "NN": NN}
+
+
 def train_policy(
     cfg,
     expl_buffer,
@@ -52,6 +64,8 @@ def train_policy(
     if cfg.main.reward in ["rnet", "graph_sig"]:
         kwargs["rnet_model"] = rnet_model
         kwargs["explr_embs"] = explr_embs
+    if cfg.main.reward in ["rnet", "graph", "graph_sig"] and cfg.train.goal_strat == "one_goal":
+        kwargs["eval_goals"] = compute_NN_eval_goals(cfg, memory, space_info, rnet_model, device)
 
     replay_buffer = ReplayBuffer(cfg.replay_buffer, space_info, device)
 
