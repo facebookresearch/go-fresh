@@ -80,7 +80,8 @@ rnet:
     dataset:
         thresh: 10
         neg_thresh: 0  # sample negative pairs within this distance
-        in_traj_ratio: 0.5
+        in_traj_ratio: 0.5  # use the same trajectory for negative pairs
+        neg_ratio: 0.5  # the ratio of negative samples
         symmetric: true
         valid_ratio: 0.05  # ratio of data to be used as validation
         num_pairs:
