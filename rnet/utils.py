@@ -6,7 +6,7 @@ import numpy as np
 from tqdm import tqdm
 
 from rnet.memory import RNetMemory
-from envs import maze_utils, walker_utils
+from envs import maze_utils, walker_utils, make_env
 
 walker_goals = {8: (8290, 414), 10: (7079, 198)}
 
@@ -143,6 +143,22 @@ def compute_NN(explr_embs, model, memory, device):
     return NN
 
 
+def get_eval_goals(cfg, memory, space_info, rnet_model, device):
+    eval_goals = {x: None for x in ["obs", "state", "embs", "NN"]}
+    env = make_env(cfg.env, space_info)
+    eval_goals["obs"] = np.float32(env.get_goals()[f"{cfg.env.obs.type}_obs"])
+    eval_goals["states"] = np.expand_dims(env.get_goals()["state"], 0)
+    if cfg.main.reward in ["rnet", "graph", "graph_sig"]:
+        goal_obs_pt = torch.from_numpy(eval_goals["obs"]).to(device)
+        eval_goals["embs"] = rnet_model.get_embedding(goal_obs_pt)  # ngoals x emb_dim
+        eval_goals["embs"] = eval_goals["embs"].unsqueeze(0)
+        if cfg.main.reward in ["graph", "graph_sig"]:
+            eval_goals["NN"] = compute_NN(
+                eval_goals["embs"], rnet_model, memory, device
+            )
+    return eval_goals
+
+
 def oracle_reward(cfg, x1, x2):
     if cfg.env.id == 'maze_U4rooms':
         oracle_distance = maze_utils.oracle_distance
@@ -168,7 +184,8 @@ def fill_replay_buffer(
     NN=None,
     graph_dist=None,
     rnet_model=None,
-    explr_embs=None
+    explr_embs=None,
+    eval_goals=None
 ):
     replay_buffer.to("cpu")
 
@@ -180,28 +197,39 @@ def fill_replay_buffer(
     while not replay_buffer.is_full():
         if cfg.train.goal_strat == "rb":
             g_obs, g1, g2 = exploration_buffer.get_random_obs()
-        elif cfg.train.goal_strat == "one_goal":
-            g1, g2 = walker_goals[cfg.eval.goal_idx]
-            g_obs = exploration_buffer.get_obs(g1, g2)
+            goal_embs = explr_embs
+            goal_states = exploration_buffer.states
+            goal_NN = NN
+        else:
+            if cfg.train.goal_strat == "one_goal":
+                goal_idx = cfg.eval.goal_idx
+            elif cfg.train.goal_strat == "all_goal":
+                ngoals = np.size(eval_goals["obs"], 0)
+                goal_idx = np.random.randint(ngoals)
+            else:
+                raise ValueError(f"invalid goal_strat: {cfg.train.goal_strat}")
+            g1, g2 = 0, goal_idx
+            g_obs = eval_goals["obs"][goal_idx]
+            goal_embs = eval_goals["embs"]
+            goal_NN = eval_goals["NN"]
+            goal_states = eval_goals["states"]
         s_obs, s1, s2 = exploration_buffer.get_random_obs()
         state = {"obs": s_obs, "goal_obs": g_obs}
         next_state = {"obs": exploration_buffer.obss[s1, s2 + 1], "goal_obs": g_obs}
         if cfg.main.reward in ["oracle_dense", "oracle_sparse"]:
             reward = oracle_reward(
-                cfg,
-                exploration_buffer.states[s1, s2 + 1],
-                exploration_buffer.states[g1, g2]
+                cfg, exploration_buffer.states[s1, s2 + 1], goal_states[g1, g2]
             )
         if cfg.main.reward in ["rnet", "graph_sig"]:
             s_emb.append(explr_embs[s1, s2 + 1])
-            g_emb.append(explr_embs[g1, g2])
+            g_emb.append(goal_embs[g1, g2])
             reward = 0  # will compute it later in parallel
         if cfg.main.reward in ["graph", "graph_sig"]:
             s_NN = NN["outgoing"][s1, s2 + 1]
             if cfg.rnet.memory.directed:
-                g_NN = NN["incoming"][g1, g2]
+                g_NN = goal_NN["incoming"][g1, g2]
             else:
-                g_NN = NN["outgoing"][g1, g2]
+                g_NN = goal_NN["outgoing"][g1, g2]
             reward = -graph_dist[s_NN, g_NN]
         replay_buffer.push(
             state, exploration_buffer.actions[s1, s2 + 1], reward, next_state

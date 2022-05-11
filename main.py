@@ -16,7 +16,7 @@ from replay_buffer import ReplayBuffer
 from exploration_buffer import ExplorationBuffer
 from rnet.model import RNetModel
 from rnet.dataset import RNetPairsSplitDataset
-from rnet.utils import build_memory, compute_NN, embed_expl_buffer
+from rnet.utils import build_memory, compute_NN, get_eval_goals, embed_expl_buffer
 
 
 log = logging.getLogger(__name__)
@@ -52,6 +52,10 @@ def train_policy(
     if cfg.main.reward in ["rnet", "graph_sig"]:
         kwargs["rnet_model"] = rnet_model
         kwargs["explr_embs"] = explr_embs
+    if cfg.train.goal_strat in ["one_goal", "all_goal"]:
+        kwargs["eval_goals"] = get_eval_goals(
+            cfg, memory, space_info, rnet_model, device
+        )
 
     replay_buffer = ReplayBuffer(cfg.replay_buffer, space_info, device)
 
@@ -78,11 +82,14 @@ def train_policy(
         tb_log.add_stats(train_stats, epoch, "train")
 
         # EVAL
-        eval_stats = eval.run(
-            agent, cfg.eval.num_episodes, buffers, barriers, n_eval_done, info_keys
-        )
-        log.info("eval " + " - ".join([f"{k}: {v:.2f}" for k, v in eval_stats.items()]))
-        tb_log.add_stats(eval_stats, epoch, "eval")
+        if epoch % cfg.eval.interval_epochs == 0:
+            eval_stats = eval.run(
+                agent, cfg.eval.num_episodes, buffers, barriers, n_eval_done, info_keys
+            )
+            log.info(
+                "eval " + " - ".join([f"{k}: {v:.2f}" for k, v in eval_stats.items()])
+            )
+            tb_log.add_stats(eval_stats, epoch, "eval")
 
         if epoch % cfg.main.save_interval == 0:
             agent.save_checkpoint(cfg.main.logs_dir, epoch)
