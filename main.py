@@ -7,7 +7,6 @@ import logging
 import sac
 import eval
 import utils
-import envs
 
 import rnet.utils as rnet_utils
 
@@ -17,7 +16,7 @@ from replay_buffer import ReplayBuffer
 from exploration_buffer import ExplorationBuffer
 from rnet.model import RNetModel
 from rnet.dataset import RNetPairsSplitDataset
-from rnet.utils import build_memory, compute_NN, embed_expl_buffer
+from rnet.utils import build_memory, compute_NN, get_eval_goals, embed_expl_buffer
 
 
 log = logging.getLogger(__name__)
@@ -33,17 +32,6 @@ def train_memory(cfg, model, explr_embs, expl_buffer, space_info, device):
         cfg.rnet.memory, explr_embs, space_info, model, expl_buffer, device
     )
     return memory
-
-
-def compute_NN_eval_goals(cfg, memory, space_info, rnet_model, device):
-    env = envs.make_env(cfg.env, space_info)
-    goal_obs = env.get_goals()[f"{cfg.env.obs.type}_obs"]
-    goal_obs = np.float32(goal_obs)
-    goal_obs_pt = torch.from_numpy(goal_obs).to(device)
-    goal_embs = rnet_model.get_embedding(goal_obs_pt)  # ngoals x emb_dim
-    goal_embs = goal_embs.unsqueeze(0)
-    NN = compute_NN(goal_embs, rnet_model, memory, device)
-    return {"obs": goal_obs, "embs": goal_embs, "NN": NN}
 
 
 def train_policy(
@@ -65,7 +53,7 @@ def train_policy(
         kwargs["rnet_model"] = rnet_model
         kwargs["explr_embs"] = explr_embs
     if cfg.train.goal_strat in ["one_goal", "all_goal"]:
-        kwargs["eval_goals"] = compute_NN_eval_goals(
+        kwargs["eval_goals"] = get_eval_goals(
             cfg, memory, space_info, rnet_model, device
         )
 
