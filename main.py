@@ -135,6 +135,7 @@ def main(cfg):
         rnet_model = None
 
     if cfg.main.train_until == "rnet":
+        tb_log.close()
         return
 
     if cfg.main.reward in ["rnet", "graph", "graph_sig"]:
@@ -166,6 +167,7 @@ def main(cfg):
         memory = None
 
     if cfg.main.train_until == "memory":
+        tb_log.close()
         return
 
     if cfg.main.reward in ["graph", "graph_sig"]:
@@ -181,6 +183,7 @@ def main(cfg):
         NN = None
 
     if cfg.main.train_until == "NN":
+        tb_log.close()
         return
 
     # Policy
@@ -196,6 +199,8 @@ def main(cfg):
         device=device,
         tb_log=tb_log,
     )
+
+    tb_log.close()
 
 
 if __name__ == "__main__":

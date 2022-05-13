@@ -1,14 +1,20 @@
 main:
-    name: ${now:%Y%m%d-%H%M%S}_${env.id}_${main.suffix}
+    name: ${now:%Y%m%d-%H%M%S}_${env.id}_${main.suffix}_r${main.run}
     suffix:
     logs_dir: /checkpoint/${env:USER}/offline-gcrl/logs/${main.name}  # store all model files
     save_interval: 100
     reward: graph  # how reward is computed. options: graph_sig, graph, rnet, oracle
-    run: #dummy variable for several runs
+    run: 0  #dummy variable for several runs
     load_from_dir:  # load RNet model, memory and NN from a given directory
     train_until: policy  # specify which step to end training. Steps are: rnet -> memory -> NN -> policy
     reward_sigm_temp: 1.0  # temperature for sigmoid reward
     reward_sigm_weight: 1.0  # the weight of rnet sigmoid part in reward
+
+plot:
+    type: tb  # where to log. options: tb, wandb, none
+    wandb_project: offline_gcrl_${env.id}
+    wandb_dir: /checkpoint/${env:USER}/offline-gcrl/logs/wandb
+    wandb_group: ${main.suffix}
 
 env:
     id: maze_U4rooms
