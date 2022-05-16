@@ -9,6 +9,7 @@ main:
     train_until: policy  # specify which step to end training. Steps are: rnet -> memory -> NN -> policy
     reward_sigm_temp: 1.0  # temperature for sigmoid reward
     reward_sigm_weight: 1.0  # the weight of rnet sigmoid part in reward
+    subgoal_transitions: false
 
 plot:
     type: tb  # where to log. options: tb, wandb, none

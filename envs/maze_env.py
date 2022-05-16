@@ -209,14 +209,6 @@ class MazeWrapper(BaseWrapper):
         sc = plt.scatter(states[:, 0], states[:, 1], c=-memory.dist[end])
 
         if show_path:
-
-            def retrieve_path(pred, i, j):
-                if pred[i, j] == -9999:
-                    return [i]
-                path = retrieve_path(pred, i, pred[i, j])
-                path.append(j)
-                return path
-
             if start is None:
                 n_trials = 0
                 while True:
@@ -225,7 +217,7 @@ class MazeWrapper(BaseWrapper):
                     if n_trials > 100 or np.linalg.norm(states[start, :2]) < 2:
                         break
 
-            path = retrieve_path(memory.pred, start, end)
+            path = memory.retrieve_path(start, end)
             for j in range(len(path) - 1):
                 temp = states[[path[j], path[j + 1]]]
                 plt.plot(temp[:, 0], temp[:, 1], color="red")

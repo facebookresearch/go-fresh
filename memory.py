@@ -28,6 +28,9 @@ class Memory:
         self.states[i] = state
         return i
 
+    def get_obs(self, i):
+        return self.obss[i]
+
     def flush(self):
         self.size = 0
 
@@ -109,6 +112,13 @@ class GraphMemory(Memory):
     def flush(self):
         super().flush()
         self.adj_matrix = np.zeros((self.cfg.capacity, self.cfg.capacity), dtype=bool)
+
+    def retrieve_path(self, start, end):
+        if self.pred[start, end] == -9999:
+            return [start]
+        path = self.retrieve_path(start, self.pred[start, end])
+        path.append(end)
+        return path
 
     def get_nb_connected_components(self, return_labels=False):
         return csg.connected_components(

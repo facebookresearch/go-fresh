@@ -47,8 +47,8 @@ def train_policy(
 ):
     kwargs = {}
     if cfg.main.reward in ["graph", "graph_sig"]:
+        kwargs["memory"] = memory
         kwargs["NN"] = NN
-        kwargs["graph_dist"] = memory.dist
     if cfg.main.reward in ["rnet", "graph_sig"]:
         kwargs["rnet_model"] = rnet_model
         kwargs["explr_embs"] = explr_embs
