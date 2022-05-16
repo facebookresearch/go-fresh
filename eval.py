@@ -50,7 +50,7 @@ def run(agent, num_episodes, buffers, barriers, n_eval_done, info_keys):
 
 def worker_eval(cfg, space_info, i, buffers, barriers, n_eval_done):
     env = envs.make_env(cfg.env, space_info, seed=i)
-    while True:
+    for _ in range((cfg.optim.num_epochs - 1) // cfg.eval.interval_epochs + 1):
         barriers["sta"].wait()
         goal_idx = cfg.eval.goal_idx if cfg.train.goal_strat == "one_goal" else None
         obs = env.reset(goal_idx=goal_idx)
