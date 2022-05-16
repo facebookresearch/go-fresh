@@ -147,14 +147,13 @@ def get_eval_goals(cfg, memory, space_info, rnet_model, device):
     eval_goals = {x: None for x in ["obs", "state", "embs", "NN"]}
     env = make_env(cfg.env, space_info)
     eval_goals["obs"] = np.float32(env.get_goals()[f"{cfg.env.obs.type}_obs"])
-    eval_goals["states"] = np.expand_dims(env.get_goals()["state"], 0)
+    eval_goals["states"] = env.get_goals()["state"]
     if cfg.main.reward in ["rnet", "graph", "graph_sig"]:
         goal_obs_pt = torch.from_numpy(eval_goals["obs"]).to(device)
         eval_goals["embs"] = rnet_model.get_embedding(goal_obs_pt)  # ngoals x emb_dim
-        eval_goals["embs"] = eval_goals["embs"].unsqueeze(0)
         if cfg.main.reward in ["graph", "graph_sig"]:
             eval_goals["NN"] = compute_NN(
-                eval_goals["embs"], rnet_model, memory, device
+                eval_goals["embs"].unsqueeze(0), rnet_model, memory, device
             )
     return eval_goals
 
@@ -177,58 +176,84 @@ def oracle_reward(cfg, x1, x2):
         raise ValueError()
 
 
+def sample_goal_rb(cfg, expl_buffer, explr_embs, NN):
+    g_obs, g1, g2 = expl_buffer.get_random_obs()
+    g_emb = explr_embs[g1, g2]
+    g_state = expl_buffer.states[g1, g2]
+    if cfg.rnet.memory.directed:
+        g_NN = NN["incoming"][g1, g2]
+    else:
+        g_NN = NN["outgoing"][g1, g2]
+    return g_obs, g_NN, g_emb, g_state
+
+
+def sample_goal_eval(cfg, eval_goals):
+    if cfg.train.goal_strat == "one_goal":
+        goal_idx = cfg.eval.goal_idx
+    elif cfg.train.goal_strat == "all_goal":
+        ngoals = np.size(eval_goals["obs"], 0)
+        goal_idx = np.random.randint(ngoals)
+    else:
+        raise ValueError(f"invalid goal_strat: {cfg.train.goal_strat}")
+    g_obs = eval_goals["obs"][goal_idx]
+    g_emb = eval_goals["embs"][goal_idx]
+    g_state = eval_goals["states"][goal_idx]
+    if cfg.rnet.memory.directed:
+        g_NN = eval_goals["NN"]["incoming"][0, goal_idx]
+    else:
+        g_NN = eval_goals["NN"]["outgoing"][0, goal_idx]
+    return g_obs, g_NN, g_emb, g_state
+
+
+def sample_goal_memory(memory: RNetMemory):
+    goal_idx = np.random.randint(len(memory))
+    g_obs = memory.get_obs(goal_idx)
+    g_emb = memory.embs[goal_idx]
+    g_state = memory.states[goal_idx]
+    g_NN = goal_idx
+    return g_obs, g_NN, g_emb, g_state
+
+
 def fill_replay_buffer(
     replay_buffer,
     expl_buffer,
     cfg,
+    device,
     memory=None,
     NN=None,
     rnet_model=None,
     explr_embs=None,
     eval_goals=None
 ):
-    replay_buffer.to("cpu")
+    replay_buffer.to("cpu")  # faster on CPU
+    if memory is not None:
+        memory.obss = memory.obss.to("cpu")
 
     if cfg.main.reward in ["rnet", "graph_sig"]:
         # will compute rewards in parallel for efficiency
         assert len(replay_buffer) == 0
-        s_emb, g_emb = [], []
+        s_embs, g_embs = [], []
 
     while not replay_buffer.is_full():
         if cfg.train.goal_strat == "rb":
-            g_obs, g1, g2 = expl_buffer.get_random_obs()
-            goal_embs = explr_embs
-            goal_states = expl_buffer.states
-            goal_NN = NN
+            g_obs, g_NN, g_emb, g_state = sample_goal_rb(cfg, expl_buffer, explr_embs, NN)
+        elif cfg.train.goal_strat == "memory":
+            g_obs, g_NN, g_emb, g_state = sample_goal_memory(memory)
         else:
-            if cfg.train.goal_strat == "one_goal":
-                goal_idx = cfg.eval.goal_idx
-            elif cfg.train.goal_strat == "all_goal":
-                ngoals = np.size(eval_goals["obs"], 0)
-                goal_idx = np.random.randint(ngoals)
-            else:
-                raise ValueError(f"invalid goal_strat: {cfg.train.goal_strat}")
-            g1, g2 = 0, goal_idx
-            g_obs = eval_goals["obs"][goal_idx]
-            goal_embs = eval_goals["embs"]
-            goal_NN = eval_goals["NN"]
-            goal_states = eval_goals["states"]
+            g_obs, g_NN, g_emb, g_state = sample_goal_eval(cfg, eval_goals)
+
         s_obs, s1, s2 = expl_buffer.get_random_obs()
         next_s_obs = expl_buffer.get_obs(s1, s2 + 1)
         if cfg.main.reward in ["oracle_dense", "oracle_sparse"]:
             reward = oracle_reward(
-                cfg, expl_buffer.states[s1, s2 + 1], goal_states[g1, g2]
+                cfg, expl_buffer.states[s1, s2 + 1], g_state
             )
         if cfg.main.reward in ["rnet", "graph_sig"]:
-            s_emb.append(explr_embs[s1, s2 + 1])
-            g_emb.append(goal_embs[g1, g2])
+            s_embs.append(explr_embs[s1, s2 + 1])
+            g_embs.append(g_emb)
             reward = 0  # will compute it later in parallel
         if cfg.main.reward in ["graph", "graph_sig"]:
             s_NN = NN["outgoing"][s1, s2 + 1]
-            if cfg.rnet.memory.directed:
-                g_NN = goal_NN["incoming"][g1, g2]
-            else:
-                g_NN = goal_NN["outgoing"][g1, g2]
         reward = -memory.dist[s_NN, g_NN]
         state = {"obs": s_obs, "goal_obs": g_obs}
         next_state = {"obs": expl_buffer.get_obs(s1, s2 + 1), "goal_obs": g_obs}
@@ -242,24 +267,24 @@ def fill_replay_buffer(
                 if replay_buffer.is_full():
                     break
                 reward = -memory.dist[s_NN, subgoal]
-                subgoal_obs = memory.get_obs(subgoal).cpu()
+                subgoal_obs = memory.get_obs(subgoal)
                 state = {"obs": s_obs, "goal_obs": subgoal_obs}
                 next_state = {"obs": next_s_obs, "goal_obs": subgoal_obs}
                 replay_buffer.push(
                     state, expl_buffer.actions[s1, s2 + 1], reward, next_state
                 )
                 if cfg.main.reward == "graph_sig":
-                    s_emb.append(explr_embs[s1, s2 + 1])
-                    g_emb.append(memory.embs[subgoal].to(goal_embs.device))
+                    s_embs.append(explr_embs[s1, s2 + 1])
+                    g_embs.append(memory.embs[subgoal])
 
-    replay_buffer.to(replay_buffer.device)
+    replay_buffer.to(device)
 
     if cfg.main.reward in ["rnet", "graph_sig"]:
         assert replay_buffer.is_full()
-        s_emb = torch.stack(s_emb)
-        g_emb = torch.stack(g_emb)
+        s_embs = torch.stack(s_embs).to(device)
+        g_embs = torch.stack(g_embs).to(device)
         with torch.no_grad():
-            rval = rnet_model.compare_embeddings(s_emb, g_emb, batchwise=True)
+            rval = rnet_model.compare_embeddings(s_embs, g_embs, batchwise=True)
         rewards = rval[:, 0]
         assert rewards.size(0) == len(replay_buffer)
         if cfg.main.reward == "graph_sig":
