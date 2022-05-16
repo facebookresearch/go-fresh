@@ -95,7 +95,6 @@ def train_policy(
             agent.save_checkpoint(cfg.main.logs_dir, epoch)
 
     for p in procs:
-        p.terminate()
         p.join()
 
 
