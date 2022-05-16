@@ -43,7 +43,7 @@ class BaseWrapper(gym.core.Wrapper):
     def seed(self, seed):
         super().seed(seed)
         self.action_space.seed(seed)
-        np.random.seed(seed)
+        # np.random.seed(seed)
 
     def load_topline_goals(self):
         goals_file = os.path.join(WORK_DIR, f"envs/topline_goals/{self.cfg.id}.npy")
