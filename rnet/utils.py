@@ -264,7 +264,7 @@ def fill_replay_buffer(
         if cfg.main.subgoal_transitions:
             assert cfg.main.reward in ["graph", "graph_sig"]
             subgoals = memory.retrieve_path(s_NN, g_NN)
-            if not cfg.train.goal_strat == "memory":
+            if cfg.train.goal_strat == "memory":
                 subgoals = subgoals[:-1]    # remove last NN since we already pushed it
             for subgoal in subgoals:
                 if replay_buffer.is_full():
