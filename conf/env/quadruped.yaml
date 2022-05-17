@@ -1,0 +1,27 @@
+# @package _global_
+defaults:
+    - /config
+
+env:
+    id: quadruped
+    obs_type: vec
+    success_thresh: 0.7
+    max_episode_steps: 1000
+    action_repeat: 2
+    obs:
+        type: vec
+        state_size: 18
+        vec_size: 24
+        rgb_size: 64
+    action_dim: 6
+
+exploration_buffer:
+    data_dir: /checkpoint/${env:USER}/offline-gcrl/data/walker/proto/buffer
+
+eval:
+    num_episodes: 100
+
+rnet:
+    model:
+        remove_velocity: true
+        dims_to_keep: 15
