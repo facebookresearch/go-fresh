@@ -5,7 +5,7 @@ defaults:
 env:
     id: maze_U4rooms
     obs_type: vec
-    success_thresh: 0.5
+    success_thresh: 1.0
     max_episode_steps: 100
     obs:
         type: vec
