@@ -75,7 +75,6 @@ class SAC(object):
         return action.detach().cpu().numpy()[0]
 
     def select_actions(self, state, evaluate=False):
-        state = torch.FloatTensor(state).to(self.device)
         if evaluate is False:
             action, _, _ = self.policy.sample(state)
         else:

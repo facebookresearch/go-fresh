@@ -84,7 +84,14 @@ def train_policy(
         # EVAL
         if epoch % cfg.eval.interval_epochs == 0:
             eval_stats = eval.run(
-                agent, cfg.eval.num_episodes, buffers, barriers, n_eval_done, info_keys
+                agent,
+                cfg.eval.num_episodes,
+                buffers,
+                barriers,
+                n_eval_done,
+                info_keys,
+                rnet_model,
+                device
             )
             log.info(
                 "eval " + " - ".join([f"{k}: {v:.2f}" for k, v in eval_stats.items()])
