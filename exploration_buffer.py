@@ -51,7 +51,7 @@ class ExplorationBuffer(object):
     def get_random_obs(self):
         traj_idx = np.random.randint(len(self))
         step = np.random.randint(self.traj_len - 1)
-        return self.obss[traj_idx][step], traj_idx, step
+        return self.get_obs(traj_idx, step), traj_idx, step
 
     def sample(self, range=None):
         if range is None:
@@ -64,13 +64,13 @@ class ExplorationBuffer(object):
         assert traj_idx < len(self), "invalid traj_idx"
         return {"obs": self.obss[traj_idx], "state": self.states[traj_idx]}
 
-    def get_obs(self, traj_idx, obs_idx):
-        assert obs_idx < self.traj_len, "invalid obs_idx"
-        return self.get_traj(traj_idx)["obs"][obs_idx]
+    def get_obs(self, traj_idx, step):
+        assert step < self.traj_len, "invalid step"
+        return self.get_traj(traj_idx)["obs"][step]
 
-    def get_state(self, traj_idx, state_idx):
-        assert state_idx < self.traj_len, "invalid state_idx"
-        return self.get_traj(traj_idx)["state"][state_idx]
+    def get_state(self, traj_idx, step):
+        assert step < self.traj_len, "invalid step"
+        return self.get_traj(traj_idx)["state"][step]
 
     def get_obss_array(self):
         return self.obss

@@ -9,6 +9,7 @@ main:
     train_until: policy  # specify which step to end training. Steps are: rnet -> memory -> NN -> policy
     reward_sigm_temp: 1.0  # temperature for sigmoid reward
     reward_sigm_weight: 1.0  # the weight of rnet sigmoid part in reward
+    subgoal_transitions: false
 
 plot:
     type: tb  # where to log. options: tb, wandb, none
@@ -41,7 +42,7 @@ optim:
     num_epochs: 1001
 
 train:
-    goal_strat: rb #goal sampling strategy: rb | one_goal | all_goal =train on all eval goals
+    goal_strat: rb # goal sampling strategy: memory | rb (replay buffer) | one_goal (one eval goal by eval.goal_idx) | all_goal (all eval goals)
 
 eval:
     num_episodes: 500
