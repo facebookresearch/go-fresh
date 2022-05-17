@@ -1,5 +1,6 @@
 import torch
 import multiprocessing as mp
+import numpy as np
 
 import envs
 
@@ -49,6 +50,7 @@ def run(agent, num_episodes, buffers, barriers, n_eval_done, info_keys):
 
 
 def worker_eval(cfg, space_info, i, buffers, barriers, n_eval_done):
+    np.random.seed(i * 2349)
     env = envs.make_env(cfg.env, space_info, seed=i)
     for _ in range((cfg.optim.num_epochs - 1) // cfg.eval.interval_epochs + 1):
         barriers["sta"].wait()
