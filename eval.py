@@ -41,9 +41,7 @@ def run(
                     buffers["final_obs"][:, 1].to(device),
                     batchwise=True
                 )[:, 0].cpu()
-                rnet_val *= buffers["done"]
-                rnet_val = rnet_val.sum() / buffers["done"].sum()
-                avg_rnet_val += rnet_val.item()
+                avg_rnet_val += (buffers["done"] * rnet_val).sum().item()
         barriers["rnv"].wait()
         for x in eval_stat:
             eval_stat[x] += buffers[x].sum().item()
