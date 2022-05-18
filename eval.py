@@ -35,6 +35,7 @@ def run(
         barriers["stp"].wait()
         for x in eval_stat:
             eval_stat[x] += buffers[x].sum().item()
+    barriers["end"].wait()
 
     if rnet_model is not None:
         with torch.no_grad():
@@ -55,8 +56,6 @@ def run(
         if den == 0:
             continue
         eval_stat[x] /= den
-
-    barriers["end"].wait()
     return eval_stat
 
 
