@@ -78,12 +78,8 @@ def worker_eval(cfg, space_info, i, buffers, barriers, n_eval_done):
                 with n_eval_done.get_lock():
                     episode_ind = n_eval_done.value
                     n_eval_done.value += 1
-                buffers["final_obs"][episode_ind, 0] = torch.from_numpy(
-                    obs["obs"]
-                )
-                buffers["final_obs"][episode_ind, 1] = torch.from_numpy(
-                    obs["goal_obs"]
-                )
+                buffers["final_obs"][episode_ind, 0] = torch.from_numpy(obs["obs"])
+                buffers["final_obs"][episode_ind, 1] = torch.from_numpy(obs["goal_obs"])
 
                 for k, v in info.items():
                     buffers[k][i] = v
