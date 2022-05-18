@@ -1,5 +1,5 @@
 import torch
-import random
+import numpy as np
 
 
 class RNetPairsDataset(torch.utils.data.Dataset):
@@ -45,22 +45,22 @@ class RNetPairsDataset(torch.utils.data.Dataset):
         return self.num_pairs
 
     def __getitem__(self, i, enforce_neg=False):
-        pos = 0 if enforce_neg else int(random.random() > self.cfg.neg_ratio)
+        pos = 0 if enforce_neg else int(np.random.random() > self.cfg.neg_ratio)
         traj1 = self.traj_buffer.sample(range=self.traj_range)["obs"]
-        i1 = random.randint(0, self.traj_len - 1)
+        i1 = np.random.randint(0, self.traj_len - 1)
 
-        in_traj = pos or random.random() < self.cfg.in_traj_ratio
+        in_traj = pos or np.random.random() < self.cfg.in_traj_ratio
         traj2 = (
             traj1 if in_traj else self.traj_buffer.sample(range=self.traj_range)["obs"]
         )
 
         interval = self.get_search_interval(i1, pos, in_traj)
         while True:
-            i2 = random.randint(*interval)
+            i2 = np.random.randint(*interval)
             if self.get_break_condition(i1, i2, pos, in_traj):
                 break
 
-        if self.cfg.symmetric and random.random() > 0.5:
+        if self.cfg.symmetric and np.random.random() > 0.5:
             return traj2[i2], traj1[i1], pos
         else:
             return traj1[i1], traj2[i2], pos
