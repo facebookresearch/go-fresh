@@ -19,21 +19,34 @@ def start_procs(cfg, space_info):
     return procs, buffers, barriers, n_eval_done, info_keys
 
 
-def run(agent, num_episodes, buffers, barriers, n_eval_done, info_keys):
+def run(
+    agent, num_episodes, buffers, barriers, n_eval_done, info_keys, rnet_model, device
+):
     agent.eval()
     n_eval_done.value = 0
     eval_stat = {x: 0.0 for x in info_keys}
+    avg_rnet_val = 0
     barriers["sta"].wait()
     while n_eval_done.value < num_episodes:
         barriers["obs"].wait()
         with torch.no_grad():
-            actions = agent.select_actions(buffers["obs"], evaluate=True)
+            actions = agent.select_actions(buffers["obs"].to(device), evaluate=True)
             buffers["act"].copy_(actions)
         barriers["act"].wait()
         barriers["stp"].wait()
+        if rnet_model is not None and buffers["done"].sum() > 0:
+            with torch.no_grad():
+                rnet_val = rnet_model(
+                    buffers["final_obs"][:, 0].to(device),
+                    buffers["final_obs"][:, 1].to(device),
+                    batchwise=True
+                )[:, 0].cpu()
+                avg_rnet_val += (buffers["done"] * rnet_val).sum().item()
+        barriers["rnv"].wait()
         for x in eval_stat:
             eval_stat[x] += buffers[x].sum().item()
 
+    eval_stat["rnet_val"] = avg_rnet_val
     for x in eval_stat:
         den = n_eval_done.value
         if "room" in x or "goal" in x:
@@ -56,6 +69,7 @@ def worker_eval(cfg, space_info, i, buffers, barriers, n_eval_done):
         barriers["sta"].wait()
         goal_idx = cfg.eval.goal_idx if cfg.train.goal_strat == "one_goal" else None
         obs = env.reset(goal_idx=goal_idx)
+        buffers["done"][buffers["done"] != 0] = 0
         num_steps = 0
         while n_eval_done.value < cfg.eval.num_episodes:
             buffers["obs"][i, 0] = torch.from_numpy(obs["obs"])
@@ -65,6 +79,10 @@ def worker_eval(cfg, space_info, i, buffers, barriers, n_eval_done):
             obs, _, _, info = env.step(buffers["act"][i])
             num_steps += cfg.env.action_repeat
             if num_steps >= env._max_episode_steps:
+                buffers["final_obs"][i, 0] = torch.from_numpy(obs["obs"])
+                buffers["final_obs"][i, 1] = torch.from_numpy(obs["goal_obs"])
+                buffers["done"][i] = 1
+
                 for k, v in info.items():
                     buffers[k][i] = v
                 with n_eval_done.get_lock():
@@ -72,9 +90,11 @@ def worker_eval(cfg, space_info, i, buffers, barriers, n_eval_done):
                 obs = env.reset(goal_idx=goal_idx)
                 num_steps = 0
             else:
+                buffers["done"][i] = 0
                 for k in info:
                     buffers[k][i] = 0
             barriers["stp"].wait()
+            barriers["rnv"].wait()
         barriers["end"].wait()
 
 
@@ -88,6 +108,7 @@ def create_mputils(cfg, space_info, ctx):
         "obs": Barrier(n + 1),
         "act": Barrier(n + 1),
         "stp": Barrier(n + 1),
+        "rnv": Barrier(n + 1),  # rnet values computation
         "end": Barrier(n + 1),
     }
 
@@ -99,7 +120,9 @@ def create_mputils(cfg, space_info, ctx):
 
     buffers = {}
     buffers["obs"] = torch.zeros((n, 2, *space_info["shape"]["obs"]))
+    buffers["final_obs"] = torch.zeros_like(buffers["obs"])
     buffers["act"] = torch.zeros((n, space_info["action_dim"]))
+    buffers["done"] = torch.zeros(n, dtype=int)
     for x in info_keys:
         buffers[x] = torch.zeros(n)
 
