@@ -1,4 +1,5 @@
 import torch
+import numpy as np
 
 TORCH_DTYPE = {"float32": torch.float32, "uint8": torch.uint8}
 
@@ -17,3 +18,12 @@ def get_space_info(obs_cfg, action_dim):
     else:
         raise ValueError(f"invalid obs_type: {obs_cfg.type}")
     return space_info
+
+
+def fix_seed(seed):
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    np.random.seed(seed)
+    torch.backends.cudnn.enabled = False
+    torch.backends.cudnn.benchmark = False
+    torch.backends.cudnn.deterministic = True
