@@ -18,9 +18,6 @@ env:
 exploration_buffer:
     data_dir: /checkpoint/${env:USER}/offline-gcrl/data/walker/proto/buffer
 
-eval:
-    num_episodes: 100
-
 rnet:
     model:
         remove_velocity: true
