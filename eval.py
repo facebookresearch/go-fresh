@@ -76,13 +76,14 @@ def worker_eval(cfg, space_info, i, buffers, barriers, n_eval_done):
             num_steps += cfg.env.action_repeat
             if num_steps >= env._max_episode_steps:
                 with n_eval_done.get_lock():
-                    buffers["final_obs"][n_eval_done.value, 0] = torch.from_numpy(
-                        obs["obs"]
-                    )
-                    buffers["final_obs"][n_eval_done.value, 1] = torch.from_numpy(
-                        obs["goal_obs"]
-                    )
+                    episode_ind = n_eval_done.value
                     n_eval_done.value += 1
+                buffers["final_obs"][episode_ind, 0] = torch.from_numpy(
+                    obs["obs"]
+                )
+                buffers["final_obs"][episode_ind, 1] = torch.from_numpy(
+                    obs["goal_obs"]
+                )
 
                 for k, v in info.items():
                     buffers[k][i] = v
