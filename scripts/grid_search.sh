@@ -8,6 +8,7 @@ python main.py \
     rnet.model.hidden_size=128 \
     rnet.model.comp_n_layers=4 \
     rnet.model.feat_size=128 \
+    plot.type=wandb \
     main.reward=graph_sig \
     train.goal_strat=rb,memory \
     main.subgoal_transitions=True,False \
