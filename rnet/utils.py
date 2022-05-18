@@ -75,7 +75,7 @@ def train(cfg, model, dataset, device, tb_log=None):
     return stats
 
 
-def build_memory(cfg, expl_embs, space_info, model, expl_buffer, device):
+def build_memory(cfg, space_info, model, expl_buffer, device):
     model.eval()
     memory = RNetMemory(cfg, space_info, model.feat_size, device)
 
@@ -88,7 +88,7 @@ def build_memory(cfg, expl_embs, space_info, model, expl_buffer, device):
         prev_NNi, prev_NNo = -1, -1
         traj = expl_buffer.get_traj(traj_idx)
         for i in range(0, expl_buffer.traj_len, cfg.skip):
-            e = expl_embs[traj_idx, i].unsqueeze(0)
+            e = expl_buffer.embs[traj_idx, i].unsqueeze(0)
             novelty_o, NNo = memory.compute_novelty(model, e)
             if cfg.directed:
                 novelty_i, NNi = memory.compute_novelty(model, e, incoming_dir=True)
@@ -120,11 +120,11 @@ def embed_expl_buffer(expl_buffer, model, device):
         traj = torch.from_numpy(traj).float().to(device)
         with torch.no_grad():
             embs[traj_idx] = model.get_embedding(traj)
-    return embs
+    expl_buffer.set_embs(embs)
 
 
-def compute_NN(expl_embs, model, memory, device):
-    num_trajs, traj_len = expl_embs.size()[:2]
+def compute_NN(expl_buffer, model, memory, device):
+    num_trajs, traj_len = len(expl_buffer), expl_buffer.traj_len
     memory.embs = memory.embs.to(device)
     NN = {"outgoing": np.zeros((num_trajs, traj_len), dtype=int)}
     if memory.cfg.directed:
@@ -134,11 +134,11 @@ def compute_NN(expl_embs, model, memory, device):
         for i in range(0, traj_len, bsz):
             j = min(i + bsz, traj_len)
             NN["outgoing"][traj_idx, i:j] = memory.get_batch_NN(
-                model, expl_embs[traj_idx, i:j]
+                model, expl_buffer.embs[traj_idx, i:j]
             )
             if memory.cfg.directed:
                 NN["incoming"][traj_idx, i:j] = memory.get_batch_NN(
-                    model, expl_embs[traj_idx, i:j], incoming_dir=True
+                    model, expl_buffer.embs[traj_idx, i:j], incoming_dir=True
                 )
     return NN
 
@@ -176,9 +176,9 @@ def oracle_reward(cfg, x1, x2):
         raise ValueError()
 
 
-def sample_goal_rb(cfg, expl_buffer, expl_embs, NN):
+def sample_goal_rb(cfg, expl_buffer, NN):
     g_obs, g1, g2 = expl_buffer.get_random_obs()
-    g_emb = expl_embs[g1, g2]
+    g_emb = expl_buffer.embs[g1, g2]
     g_state = expl_buffer.states[g1, g2]
     if cfg.rnet.memory.directed:
         g_NN = NN["incoming"][g1, g2]
@@ -222,14 +222,13 @@ def fill_replay_buffer(
     memory=None,
     NN=None,
     rnet_model=None,
-    expl_embs=None,
     eval_goals=None
 ):
     replay_buffer.to("cpu")  # faster on CPU
     if memory is not None:
         memory.obss = memory.obss.to("cpu")
-    if expl_embs is not None:
-        expl_embs = expl_embs.to("cpu")
+    if expl_buffer.embs is not None:
+        expl_buffer.embs = expl_buffer.embs.to("cpu")
 
     if cfg.main.reward in ["rnet", "graph_sig"]:
         # will compute rewards in parallel for efficiency
@@ -238,9 +237,7 @@ def fill_replay_buffer(
 
     while not replay_buffer.is_full():
         if cfg.train.goal_strat == "rb":
-            g_obs, g_NN, g_emb, g_state = sample_goal_rb(
-                cfg, expl_buffer, expl_embs, NN
-            )
+            g_obs, g_NN, g_emb, g_state = sample_goal_rb(cfg, expl_buffer, NN)
         elif cfg.train.goal_strat == "memory":
             g_obs, g_NN, g_emb, g_state = sample_goal_memory(memory)
         else:
@@ -251,7 +248,7 @@ def fill_replay_buffer(
         if cfg.main.reward in ["oracle_dense", "oracle_sparse"]:
             reward = oracle_reward(cfg, expl_buffer.states[s1, s2 + 1], g_state)
         if cfg.main.reward in ["rnet", "graph_sig"]:
-            s_embs.append(expl_embs[s1, s2 + 1])
+            s_embs.append(expl_buffer.embs[s1, s2 + 1])
             g_embs.append(g_emb)
             reward = 0  # will compute it later in parallel
         if cfg.main.reward in ["graph", "graph_sig"]:
@@ -277,7 +274,7 @@ def fill_replay_buffer(
                     state, expl_buffer.actions[s1, s2 + 1], reward, next_state
                 )
                 if cfg.main.reward == "graph_sig":
-                    s_embs.append(expl_embs[s1, s2 + 1])
+                    s_embs.append(expl_buffer.embs[s1, s2 + 1])
                     g_embs.append(memory.embs[subgoal])
 
     replay_buffer.to(device)

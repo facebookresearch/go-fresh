@@ -27,17 +27,13 @@ def train_rnet(cfg, model, expl_buffer, tb_log, device):
     _ = rnet_utils.train(cfg.rnet.train, model, dataset, device, tb_log)
 
 
-def train_memory(cfg, model, expl_embs, expl_buffer, space_info, device):
-    memory = build_memory(
-        cfg.rnet.memory, expl_embs, space_info, model, expl_buffer, device
-    )
-    return memory
+def train_memory(cfg, model, expl_buffer, space_info, device):
+    return build_memory(cfg.rnet.memory, space_info, model, expl_buffer, device)
 
 
 def train_policy(
     cfg,
     expl_buffer,
-    expl_embs,
     rnet_model,
     memory,
     NN,
@@ -51,7 +47,6 @@ def train_policy(
         kwargs["NN"] = NN
     if cfg.main.reward in ["rnet", "graph_sig"]:
         kwargs["rnet_model"] = rnet_model
-        kwargs["expl_embs"] = expl_embs
     if cfg.train.goal_strat in ["one_goal", "all_goal"]:
         kwargs["eval_goals"] = get_eval_goals(
             cfg, memory, space_info, rnet_model, device
@@ -145,7 +140,7 @@ def main(cfg):
         return
 
     if cfg.main.reward in ["rnet", "graph", "graph_sig"]:
-        expl_embs = embed_expl_buffer(expl_buffer, rnet_model, device)
+        embed_expl_buffer(expl_buffer, rnet_model, device)
         # Memory and graph
         if path.exists(memory_path):
             log.info(f"Loading memory from {memory_path}")
@@ -158,7 +153,6 @@ def main(cfg):
             memory = train_memory(
                 cfg=cfg,
                 model=rnet_model,
-                expl_embs=expl_embs,
                 expl_buffer=expl_buffer,
                 space_info=space_info,
                 device=device,
@@ -169,7 +163,6 @@ def main(cfg):
             f"Number of connected components: {memory.get_nb_connected_components()}"
         )
     else:
-        expl_embs = None
         memory = None
 
     if cfg.main.train_until == "memory":
@@ -183,7 +176,7 @@ def main(cfg):
             NN = dict(np.load(NN_path))
         else:
             log.info("Computing NN")
-            NN = compute_NN(expl_embs, rnet_model, memory, device)
+            NN = compute_NN(expl_buffer, rnet_model, memory, device)
             np.savez(NN_path, **NN)
     else:
         NN = None
@@ -197,7 +190,6 @@ def main(cfg):
     train_policy(
         cfg=cfg,
         expl_buffer=expl_buffer,
-        expl_embs=expl_embs,
         rnet_model=rnet_model,
         memory=memory,
         NN=NN,

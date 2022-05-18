@@ -13,6 +13,7 @@ class ExplorationBuffer(object):
         self.cfg = cfg
         self.print_fn = log.info
         self.load_data(cfg.data_dir)
+        self.embs = None
 
     def read_x(self, path):
         with np.load(path) as data:
@@ -77,3 +78,6 @@ class ExplorationBuffer(object):
 
     def get_states_array(self):
         return self.states
+
+    def set_embs(self, embs):
+        self.embs = embs
