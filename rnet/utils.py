@@ -178,6 +178,10 @@ def oracle_reward(cfg, x1, x2):
 
 def sample_goal_rb(cfg, expl_buffer, NN):
     g_obs, g1, g2 = expl_buffer.get_random_obs()
+    return get_goal_rb(g1, g2, g_obs, cfg, expl_buffer, NN)
+
+
+def get_goal_rb(g1, g2, g_obs, cfg, expl_buffer, NN):
     g_emb = expl_buffer.embs[g1, g2]
     g_state = expl_buffer.states[g1, g2]
     if cfg.rnet.memory.directed:
@@ -214,6 +218,23 @@ def sample_goal_memory(memory: RNetMemory):
     return g_obs, g_NN, g_emb, g_state
 
 
+def compute_NN_dict(cfg, NN, memory):
+    NN_array = NN["incoming"] if cfg.rnet.memory.directed else NN["outgoing"]
+    NN_dict = {x: [] for x in np.arange(len(memory))}
+    for traj_idx in range(NN_array.shape[0]):
+        for step in range(NN_array.shape[1]):
+            NN_dict[NN_array[traj_idx, step]].append((traj_idx, step))
+    return NN_dict
+
+
+def sample_goal_memory_bins(cfg, expl_buffer, memory: RNetMemory, NN, NN_dict):
+    goal_idx = np.random.randint(len(memory))
+    idx = np.random.randint(len(NN_dict[goal_idx]))
+    g1, g2 = NN_dict[goal_idx][idx]
+    g_obs = expl_buffer.get_obs(g1, g2)
+    return get_goal_rb(g1, g2, g_obs, cfg, expl_buffer, NN)
+
+
 def fill_replay_buffer(
     replay_buffer,
     expl_buffer,
@@ -221,6 +242,7 @@ def fill_replay_buffer(
     device,
     memory=None,
     NN=None,
+    NN_dict=None,
     rnet_model=None,
     eval_goals=None
 ):
@@ -240,10 +262,14 @@ def fill_replay_buffer(
             g_obs, g_NN, g_emb, g_state = sample_goal_rb(cfg, expl_buffer, NN)
         elif cfg.train.goal_strat == "memory":
             g_obs, g_NN, g_emb, g_state = sample_goal_memory(memory)
+        elif cfg.train.goal_strat == "memory_bins":
+            g_obs, g_NN, g_emb, g_state = sample_goal_memory_bins(
+                cfg, expl_buffer, memory, NN, NN_dict
+            )
         else:
             g_obs, g_NN, g_emb, g_state = sample_goal_eval(cfg, eval_goals)
 
-        s_obs, s1, s2 = expl_buffer.get_random_obs()
+        s_obs, s1, s2 = expl_buffer.get_random_obs(not_last=True)
         next_s_obs = expl_buffer.get_obs(s1, s2 + 1)
         if cfg.main.reward in ["oracle_dense", "oracle_sparse"]:
             reward = oracle_reward(cfg, expl_buffer.states[s1, s2 + 1], g_state)

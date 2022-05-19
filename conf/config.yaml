@@ -42,7 +42,7 @@ optim:
     num_epochs: 1001
 
 train:
-    goal_strat: rb # goal sampling strategy: memory | rb (replay buffer) | one_goal (one eval goal by eval.goal_idx) | all_goal (all eval goals)
+    goal_strat: rb # goal sampling strategy: memory | memory_bins | rb (replay buffer) | one_goal (one eval goal by eval.goal_idx) | all_goal (all eval goals)
 
 eval:
     num_episodes: 500
