@@ -6,9 +6,7 @@ import numpy as np
 from tqdm import tqdm
 
 from rnet.memory import RNetMemory
-from envs import maze_utils, walker_utils, make_env
-
-walker_goals = {8: (8290, 414), 10: (7079, 198)}
+from envs import make_env, oracle_reward
 
 
 def train(cfg, model, dataset, device, tb_log=None):
@@ -156,24 +154,6 @@ def get_eval_goals(cfg, memory, space_info, rnet_model, device):
                 eval_goals["embs"].unsqueeze(0), rnet_model, memory, device
             )
     return eval_goals
-
-
-def oracle_reward(cfg, x1, x2):
-    if cfg.env.id == 'maze_U4rooms':
-        oracle_distance = maze_utils.oracle_distance
-    elif cfg.env.id == 'walker':
-        oracle_distance = walker_utils.oracle_distance
-    else:
-        raise ValueError()
-
-    if cfg.main.reward == "oracle_sparse":
-        if oracle_distance(x1, x2) < cfg.env.success_thresh:
-            return 0
-        return -1
-    elif cfg.main.reward == "oracle_dense":
-        return -oracle_distance(x1, x2)
-    else:
-        raise ValueError()
 
 
 def sample_goal_rb(cfg, expl_buffer, NN):
