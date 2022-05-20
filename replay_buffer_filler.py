@@ -116,11 +116,14 @@ class ReplayBufferFiller:
     def run(self):
         if self.memory is not None:
             self.memory.obss = self.memory.obss.to("cpu")
-            self.memory.embs = self.memory.embs.to(self.device)
 
         if self.cfg.main.reward in ["rnet", "graph_sig"]:
             # will compute rewards in parallel for efficiency
-            s_embs, g_embs = [], []
+            s_embs = torch.empty(
+                (len(self.replay_buffer), self.cfg.rnet.model.feat_size),
+                dtype=torch.float32,
+            )
+            g_embs = torch.empty_like(s_embs)
 
         i = 0
         while i < len(self.replay_buffer):
@@ -133,8 +136,8 @@ class ReplayBufferFiller:
                     self.cfg, self.expl_buffer.states[s1, s2 + 1], g_state
                 )
             if self.cfg.main.reward in ["rnet", "graph_sig"]:
-                s_embs.append(self.expl_buffer.embs[s1, s2 + 1])
-                g_embs.append(g_emb)
+                s_embs[i] = self.expl_buffer.embs[s1, s2 + 1]
+                g_embs[i] = g_emb
                 reward = 0  # will compute it later in parallel
             if self.cfg.main.reward in ["graph", "graph_sig"]:
                 s_NN = self.NN["outgoing"][s1, s2 + 1]
@@ -160,15 +163,15 @@ class ReplayBufferFiller:
                     state = {"obs": s_obs, "goal_obs": subgoal_obs}
                     next_state = {"obs": next_s_obs, "goal_obs": subgoal_obs}
                     self.replay_buffer.write(i, state, action, reward, next_state)
-                    i += 1
                     if self.cfg.main.reward == "graph_sig":
-                        s_embs.append(self.expl_buffer.embs[s1, s2 + 1])
-                        g_embs.append(self.memory.embs[subgoal])
+                        s_embs[i] = self.expl_buffer.embs[s1, s2 + 1]
+                        g_embs[i] = self.memory.embs[subgoal]
+                    i += 1
 
         if self.cfg.main.reward in ["rnet", "graph_sig"]:
-            s_embs = torch.stack(s_embs).to(self.device)
-            g_embs = torch.stack(g_embs).to(self.device)
             with torch.no_grad():
+                s_embs = s_embs.to(self.device)
+                g_embs = g_embs.to(self.device)
                 rval = self.rnet_model.compare_embeddings(
                     s_embs, g_embs, batchwise=True
                 )
