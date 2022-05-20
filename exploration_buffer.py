@@ -49,9 +49,10 @@ class ExplorationBuffer(object):
     def __len__(self):
         return self.obss.shape[0]
 
-    def get_random_obs(self):
+    def get_random_obs(self, not_last=False):
+        max_step = self.traj_len - 1 if not_last else self.traj_len
         traj_idx = np.random.randint(len(self))
-        step = np.random.randint(self.traj_len - 1)
+        step = np.random.randint(max_step)
         return self.get_obs(traj_idx, step), traj_idx, step
 
     def sample(self, range=None):

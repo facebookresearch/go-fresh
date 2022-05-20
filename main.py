@@ -16,7 +16,9 @@ from replay_buffer import ReplayBuffer
 from exploration_buffer import ExplorationBuffer
 from rnet.model import RNetModel
 from rnet.dataset import RNetPairsSplitDataset
-from rnet.utils import build_memory, compute_NN, get_eval_goals, embed_expl_buffer
+from rnet.utils import (
+    build_memory, compute_NN, get_eval_goals, embed_expl_buffer, compute_NN_dict
+)
 
 
 log = logging.getLogger(__name__)
@@ -51,6 +53,8 @@ def train_policy(
         kwargs["eval_goals"] = get_eval_goals(
             cfg, memory, space_info, rnet_model, device
         )
+    elif cfg.train.goal_strat == "memory_bins":
+        kwargs["NN_dict"] = compute_NN_dict(cfg, NN, memory)
 
     replay_buffer = ReplayBuffer(cfg.replay_buffer, space_info, device)
 
