@@ -37,6 +37,7 @@ exploration_buffer:
 replay_buffer:
     capacity: 100000
     reward_scaling: 0.01
+    num_procs: 10
 
 optim:
     num_epochs: 1001

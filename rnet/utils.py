@@ -117,7 +117,7 @@ def embed_expl_buffer(expl_buffer, model, device):
         traj = torch.from_numpy(traj).float().to(device)
         with torch.no_grad():
             embs[traj_idx] = model.get_embedding(traj)
-    expl_buffer.set_embs(embs)
+    expl_buffer.set_embs(embs.cpu())
 
 
 def compute_NN(embs, model, memory, device):
