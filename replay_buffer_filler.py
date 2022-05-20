@@ -120,10 +120,10 @@ class ReplayBufferFiller:
 
         if self.cfg.main.reward in ["rnet", "graph_sig"]:
             # will compute rewards in parallel for efficiency
-            assert len(self.replay_buffer) == 0
             s_embs, g_embs = [], []
 
-        while not self.replay_buffer.is_full():
+        i = 0
+        while i < len(self.replay_buffer):
             g_obs, g_NN, g_emb, g_state = self.sample_goal()
 
             s_obs, s1, s2 = self.expl_buffer.get_random_obs(not_last=True)
@@ -143,9 +143,9 @@ class ReplayBufferFiller:
             next_state = {
                 "obs": self.expl_buffer.get_obs(s1, s2 + 1), "goal_obs": g_obs
             }
-            self.replay_buffer.push(
-                state, self.expl_buffer.actions[s1, s2 + 1], reward, next_state
-            )
+            action = self.expl_buffer.actions[s1, s2 + 1]
+            self.replay_buffer.write(i, state, action, reward, next_state)
+            i += 1
 
             if self.cfg.main.subgoal_transitions:
                 assert self.cfg.main.reward in ["graph", "graph_sig"]
@@ -153,21 +153,19 @@ class ReplayBufferFiller:
                 if self.cfg.train.goal_strat == "memory":
                     subgoals = subgoals[:-1]
                 for subgoal in subgoals:
-                    if self.replay_buffer.is_full():
+                    if i == len(self.replay_buffer):
                         break
                     reward = -self.memory.dist[s_NN, subgoal]
                     subgoal_obs = self.memory.get_obs(subgoal)
                     state = {"obs": s_obs, "goal_obs": subgoal_obs}
                     next_state = {"obs": next_s_obs, "goal_obs": subgoal_obs}
-                    self.replay_buffer.push(
-                        state, self.expl_buffer.actions[s1, s2 + 1], reward, next_state
-                    )
+                    self.replay_buffer.write(i, state, action, reward, next_state)
+                    i += 1
                     if self.cfg.main.reward == "graph_sig":
                         s_embs.append(self.expl_buffer.embs[s1, s2 + 1])
                         g_embs.append(self.memory.embs[subgoal])
 
         if self.cfg.main.reward in ["rnet", "graph_sig"]:
-            assert self.replay_buffer.is_full()
             s_embs = torch.stack(s_embs).to(self.device)
             g_embs = torch.stack(g_embs).to(self.device)
             with torch.no_grad():

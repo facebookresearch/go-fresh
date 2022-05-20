@@ -57,7 +57,6 @@ def train_policy(
         log.info(f"epoch: {epoch}")
 
         # TRAIN
-        replay_buffer.flush()
         replay_buffer.to("cpu")
         log.info("filling replay buffer")
         replay_buffer_filler.run()
