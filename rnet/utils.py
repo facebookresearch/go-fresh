@@ -1,6 +1,5 @@
 import os
 import torch
-import random
 import numpy as np
 
 from tqdm import tqdm
@@ -80,7 +79,7 @@ def build_memory(cfg, space_info, model, expl_buffer, device):
     memory.add_first_obs(model, x, expl_buffer.get_state(0, 0))
 
     for traj_idx in tqdm(range(len(expl_buffer)), desc="Updating Memory"):
-        if random.random() > cfg.skip_traj:
+        if np.random.random() > cfg.skip_traj:
             continue
         prev_NNi, prev_NNo = -1, -1
         traj = expl_buffer.get_traj(traj_idx)

@@ -100,6 +100,8 @@ def main(cfg):
     tb_log = Logger(cfg.main.logs_dir, cfg)
     log.info(f"exp name: {cfg.main.name}")
 
+    utils.fix_seed(cfg.main.seed)
+
     # setup paths and load
     rnet_path = path.join(cfg.main.logs_dir, "model.pth")
     memory_path = path.join(cfg.main.logs_dir, "memory.npy")

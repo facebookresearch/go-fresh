@@ -1,5 +1,4 @@
 import torch
-import random
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy.sparse.csgraph as csg
@@ -23,7 +22,7 @@ class Memory:
             i = len(self)
             self.size += 1
         else:
-            i = random.randint(0, len(self) - 1)
+            i = np.random.randint(0, len(self) - 1)
         self.obss[i] = obs
         self.states[i] = state
         return i

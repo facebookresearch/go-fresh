@@ -1,5 +1,4 @@
 import os
-import random
 import logging
 import numpy as np
 import multiprocessing as mp
@@ -57,9 +56,9 @@ class ExplorationBuffer(object):
 
     def sample(self, range=None):
         if range is None:
-            i = random.randint(0, len(self) - 1)
+            i = np.random.randint(0, len(self) - 1)
         else:
-            i = random.randint(range[0], range[1] - 1)
+            i = np.random.randint(range[0], range[1] - 1)
         return self.get_traj(i)
 
     def get_traj(self, traj_idx):
