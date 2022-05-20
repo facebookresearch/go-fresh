@@ -13,12 +13,11 @@ import rnet.utils as rnet_utils
 from rnet.memory import RNetMemory
 from logger import Logger
 from replay_buffer import ReplayBuffer
+from replay_buffer_filler import ReplayBufferFiller
 from exploration_buffer import ExplorationBuffer
 from rnet.model import RNetModel
 from rnet.dataset import RNetPairsSplitDataset
-from rnet.utils import (
-    build_memory, compute_NN, get_eval_goals, embed_expl_buffer, compute_NN_dict
-)
+from rnet.utils import build_memory, compute_NN, embed_expl_buffer
 
 
 log = logging.getLogger(__name__)
@@ -43,20 +42,11 @@ def train_policy(
     device,
     tb_log
 ):
-    kwargs = {}
-    if cfg.main.reward in ["graph", "graph_sig"]:
-        kwargs["memory"] = memory
-        kwargs["NN"] = NN
-    if cfg.main.reward in ["rnet", "graph_sig"]:
-        kwargs["rnet_model"] = rnet_model
-    if cfg.train.goal_strat in ["one_goal", "all_goal"]:
-        kwargs["eval_goals"] = get_eval_goals(
-            cfg, memory, space_info, rnet_model, device
-        )
-    elif cfg.train.goal_strat == "memory_bins":
-        kwargs["NN_dict"] = compute_NN_dict(cfg, NN, memory)
 
     replay_buffer = ReplayBuffer(cfg.replay_buffer, space_info)
+    replay_buffer_filler = ReplayBufferFiller(
+        replay_buffer, expl_buffer, cfg, space_info, device, memory, NN, rnet_model
+    )
 
     agent = sac.SAC(cfg.sac, space_info, device)
 
@@ -70,7 +60,7 @@ def train_policy(
         replay_buffer.flush()
         replay_buffer.to_numpy()
         log.info("filling replay buffer")
-        rnet_utils.fill_replay_buffer(replay_buffer, expl_buffer, cfg, device, **kwargs)
+        replay_buffer_filler.run()
 
         log.info("train one epoch")
         replay_buffer.to_torch(device)
@@ -182,7 +172,7 @@ def main(cfg):
             NN = dict(np.load(NN_path))
         else:
             log.info("Computing NN")
-            NN = compute_NN(expl_buffer, rnet_model, memory, device)
+            NN = compute_NN(expl_buffer.embs, rnet_model, memory, device)
             np.savez(NN_path, **NN)
     else:
         NN = None
