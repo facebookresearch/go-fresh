@@ -58,12 +58,12 @@ def train_policy(
 
         # TRAIN
         replay_buffer.flush()
-        replay_buffer.to_numpy()
+        replay_buffer.to("cpu")
         log.info("filling replay buffer")
         replay_buffer_filler.run()
 
         log.info("train one epoch")
-        replay_buffer.to_torch(device)
+        replay_buffer.to(device)
         train_stats = agent.train_one_epoch(replay_buffer)
         log.info(
             "train " + " - ".join([f"{k}: {v:.2f}" for k, v in train_stats.items()])

@@ -179,7 +179,7 @@ class ReplayBufferFiller:
             if self.cfg.main.reward == "graph_sig":
                 rewards = torch.sigmoid(rewards / self.cfg.main.reward_sigm_temp) - 1
                 rewards *= self.cfg.main.reward_sigm_weight
-            rewards = rewards.cpu().numpy()
+            rewards = rewards.cpu()
             rewards *= self.cfg.replay_buffer.reward_scaling
             rewards += self.replay_buffer.rewards[:, 0]
-            self.replay_buffer.rewards[:, 0] = rewards
+            self.replay_buffer.rewards[:, 0].copy_(rewards)
