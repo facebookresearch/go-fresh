@@ -17,19 +17,16 @@ class ReplayBuffer(object):
         )
         self.next_states = torch.empty_like(self.states)
         self.actions = torch.empty(
-            (self.capacity, space_info["action_dim"]), dtype=float
+            (self.capacity, space_info["action_dim"]), dtype=torch.float32
         )
-        self.rewards = torch.empty((self.capacity, 1), dtype=float)
-
-    def process_state(self, state):
-        return np.stack((state["obs"], state["goal_obs"]))
+        self.rewards = torch.empty((self.capacity, 1), dtype=torch.float32)
 
     def write(self, i, state, action, reward, next_state):
         assert i < self.capacity
-        self.states[i] = torch.from_numpy(self.process_state(state))
+        self.states[i] = torch.from_numpy(state)
         self.actions[i] = torch.from_numpy(action)
         self.rewards[i] = self.cfg.reward_scaling * reward
-        self.next_states[i] = torch.from_numpy(self.process_state(next_state))
+        self.next_states[i] = torch.from_numpy(next_state)
 
     def sample(self, batch_size):
         idxs = np.random.randint(0, len(self), size=batch_size)
@@ -39,6 +36,12 @@ class ReplayBuffer(object):
         next_states = self.next_states[idxs].float()
         mask = torch.ones((batch_size, 1), device=self.device)
         return states, actions, rewards, next_states, mask
+
+    def share_memory(self):
+        self.states.share_memory_()
+        self.actions.share_memory_()
+        self.rewards.share_memory_()
+        self.next_states.share_memory_()
 
     def to(self, device):
         if self.device == device:

@@ -1,5 +1,6 @@
 import torch
 import numpy as np
+import multiprocessing as mp
 
 from envs import make_env, oracle_reward
 from rnet.utils import compute_NN
@@ -117,63 +118,35 @@ class ReplayBufferFiller:
         if self.memory is not None:
             self.memory.obss = self.memory.obss.to("cpu")
 
+        ctx = mp.get_context("fork")
+        self.idx = ctx.Value("i", 0)
+        self.replay_buffer.share_memory()
+
         if self.cfg.main.reward in ["rnet", "graph_sig"]:
             # will compute rewards in parallel for efficiency
-            s_embs = torch.empty(
+            self.s_embs = torch.empty(
                 (len(self.replay_buffer), self.cfg.rnet.model.feat_size),
                 dtype=torch.float32,
             )
-            g_embs = torch.empty_like(s_embs)
+            self.g_embs = torch.empty_like(self.s_embs)
+            self.s_embs.share_memory_()
+            self.g_embs.share_memory_()
 
-        i = 0
-        while i < len(self.replay_buffer):
-            g_obs, g_NN, g_emb, g_state = self.sample_goal()
+        procs = []
+        for _ in range(self.cfg.replay_buffer.num_procs):
+            p = ctx.Process(target=self.worker_fill)
+            p.start()
+            procs.append(p)
 
-            s_obs, s1, s2 = self.expl_buffer.get_random_obs(not_last=True)
-            next_s_obs = self.expl_buffer.get_obs(s1, s2 + 1)
-            if self.cfg.main.reward in ["oracle_dense", "oracle_sparse"]:
-                reward = oracle_reward(
-                    self.cfg, self.expl_buffer.states[s1, s2 + 1], g_state
-                )
-            if self.cfg.main.reward in ["rnet", "graph_sig"]:
-                s_embs[i] = self.expl_buffer.embs[s1, s2 + 1]
-                g_embs[i] = g_emb
-                reward = 0  # will compute it later in parallel
-            if self.cfg.main.reward in ["graph", "graph_sig"]:
-                s_NN = self.NN["outgoing"][s1, s2 + 1]
-                reward = -self.memory.dist[s_NN, g_NN]
-            state = {"obs": s_obs, "goal_obs": g_obs}
-            next_state = {
-                "obs": self.expl_buffer.get_obs(s1, s2 + 1), "goal_obs": g_obs
-            }
-            action = self.expl_buffer.actions[s1, s2 + 1]
-            self.replay_buffer.write(i, state, action, reward, next_state)
-            i += 1
-
-            if self.cfg.main.subgoal_transitions:
-                assert self.cfg.main.reward in ["graph", "graph_sig"]
-                subgoals = self.memory.retrieve_path(s_NN, g_NN)
-                if self.cfg.train.goal_strat == "memory":
-                    subgoals = subgoals[:-1]
-                for subgoal in subgoals:
-                    if i == len(self.replay_buffer):
-                        break
-                    reward = -self.memory.dist[s_NN, subgoal]
-                    subgoal_obs = self.memory.get_obs(subgoal)
-                    state = {"obs": s_obs, "goal_obs": subgoal_obs}
-                    next_state = {"obs": next_s_obs, "goal_obs": subgoal_obs}
-                    self.replay_buffer.write(i, state, action, reward, next_state)
-                    if self.cfg.main.reward == "graph_sig":
-                        s_embs[i] = self.expl_buffer.embs[s1, s2 + 1]
-                        g_embs[i] = self.memory.embs[subgoal]
-                    i += 1
+        for p in procs:
+            p.join()
 
         if self.cfg.main.reward in ["rnet", "graph_sig"]:
             with torch.no_grad():
-                s_embs = s_embs.to(self.device)
-                g_embs = g_embs.to(self.device)
+                self.s_embs = self.s_embs.to(self.device)
+                self.g_embs = self.g_embs.to(self.device)
                 rval = self.rnet_model.compare_embeddings(
-                    s_embs, g_embs, batchwise=True
+                    self.s_embs, self.g_embs, batchwise=True
                 )
             rewards = rval[:, 0]
             assert rewards.size(0) == len(self.replay_buffer)
@@ -184,3 +157,54 @@ class ReplayBufferFiller:
             rewards *= self.cfg.replay_buffer.reward_scaling
             rewards += self.replay_buffer.rewards[:, 0]
             self.replay_buffer.rewards[:, 0].copy_(rewards)
+
+    def get_safe_i(self):
+        with self.idx.get_lock():
+            if self.idx.value == len(self.replay_buffer):
+                return -1
+            i = self.idx.value
+            self.idx.value += 1
+            return i
+
+    def worker_fill(self):
+        while True:
+            i = self.get_safe_i()
+            if i == -1:
+                break
+            g_obs, g_NN, g_emb, g_state = self.sample_goal()
+
+            s_obs, s1, s2 = self.expl_buffer.get_random_obs(not_last=True)
+            next_s_obs = self.expl_buffer.get_obs(s1, s2 + 1)
+            if self.cfg.main.reward in ["oracle_dense", "oracle_sparse"]:
+                reward = oracle_reward(
+                    self.cfg, self.expl_buffer.states[s1, s2 + 1], g_state
+                )
+            elif self.cfg.main.reward in ["rnet", "graph_sig"]:
+                self.s_embs[i] = self.expl_buffer.embs[s1, s2 + 1]
+                self.g_embs[i] = g_emb
+                reward = 0  # will compute it later in parallel
+            if self.cfg.main.reward in ["graph", "graph_sig"]:
+                s_NN = self.NN["outgoing"][s1, s2 + 1]
+                reward = -self.memory.dist[s_NN, g_NN]
+            state = np.stack((s_obs, g_obs))
+            next_state = np.stack((self.expl_buffer.get_obs(s1, s2 + 1), g_obs))
+            action = self.expl_buffer.actions[s1, s2 + 1]
+            self.replay_buffer.write(i, state, action, reward, next_state)
+
+            if self.cfg.main.subgoal_transitions:
+                assert self.cfg.main.reward in ["graph", "graph_sig"]
+                subgoals = self.memory.retrieve_path(s_NN, g_NN)
+                if self.cfg.train.goal_strat == "memory":
+                    subgoals = subgoals[:-1]
+                for subgoal in subgoals:
+                    i = self.get_safe_i()
+                    if i == -1:
+                        break
+                    reward = -self.memory.dist[s_NN, subgoal]
+                    subgoal_obs = self.memory.get_obs(subgoal)
+                    state = np.stack((s_obs, subgoal_obs))
+                    next_state = np.stack((next_s_obs, subgoal_obs))
+                    self.replay_buffer.write(i, state, action, reward, next_state)
+                    if self.cfg.main.reward == "graph_sig":
+                        self.s_embs[i] = self.expl_buffer.embs[s1, s2 + 1]
+                        self.g_embs[i] = self.memory.embs[subgoal]
