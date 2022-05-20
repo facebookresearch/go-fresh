@@ -103,6 +103,16 @@ class ReplayBufferFiller:
         g_obs = self.expl_buffer.get_obs(g1, g2)
         return self.get_goal_rb(g1, g2, g_obs)
 
+    def sample_goal(self):
+        if self.cfg.train.goal_strat == "rb":
+            return self.sample_goal_rb()
+        elif self.cfg.train.goal_strat == "memory":
+            return self.sample_goal_memory()
+        elif self.cfg.train.goal_strat == "memory_bins":
+            return self.sample_goal_memory_bins()
+        else:
+            return self.sample_goal_eval()
+
     def run(self):
         if self.memory is not None:
             self.memory.obss = self.memory.obss.to("cpu")
@@ -113,14 +123,7 @@ class ReplayBufferFiller:
             s_embs, g_embs = [], []
 
         while not self.replay_buffer.is_full():
-            if self.cfg.train.goal_strat == "rb":
-                g_obs, g_NN, g_emb, g_state = self.sample_goal_rb()
-            elif self.cfg.train.goal_strat == "memory":
-                g_obs, g_NN, g_emb, g_state = self.sample_goal_memory()
-            elif self.cfg.train.goal_strat == "memory_bins":
-                g_obs, g_NN, g_emb, g_state = self.sample_goal_memory_bins()
-            else:
-                g_obs, g_NN, g_emb, g_state = self.sample_goal_eval()
+            g_obs, g_NN, g_emb, g_state = self.sample_goal()
 
             s_obs, s1, s2 = self.expl_buffer.get_random_obs(not_last=True)
             next_s_obs = self.expl_buffer.get_obs(s1, s2 + 1)
