@@ -56,7 +56,7 @@ def train_policy(
     elif cfg.train.goal_strat == "memory_bins":
         kwargs["NN_dict"] = compute_NN_dict(cfg, NN, memory)
 
-    replay_buffer = ReplayBuffer(cfg.replay_buffer, space_info, device)
+    replay_buffer = ReplayBuffer(cfg.replay_buffer, space_info)
 
     agent = sac.SAC(cfg.sac, space_info, device)
 
@@ -68,10 +68,12 @@ def train_policy(
 
         # TRAIN
         replay_buffer.flush()
+        replay_buffer.to_numpy()
         log.info("filling replay buffer")
         rnet_utils.fill_replay_buffer(replay_buffer, expl_buffer, cfg, device, **kwargs)
 
         log.info("train one epoch")
+        replay_buffer.to_torch(device)
         train_stats = agent.train_one_epoch(replay_buffer)
         log.info(
             "train " + " - ".join([f"{k}: {v:.2f}" for k, v in train_stats.items()])

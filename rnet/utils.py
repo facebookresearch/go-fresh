@@ -246,11 +246,9 @@ def fill_replay_buffer(
     rnet_model=None,
     eval_goals=None
 ):
-    replay_buffer.to("cpu")  # faster on CPU
+
     if memory is not None:
         memory.obss = memory.obss.to("cpu")
-    if expl_buffer.embs is not None:
-        expl_buffer.embs = expl_buffer.embs.to("cpu")
 
     if cfg.main.reward in ["rnet", "graph_sig"]:
         # will compute rewards in parallel for efficiency
@@ -303,8 +301,6 @@ def fill_replay_buffer(
                     s_embs.append(expl_buffer.embs[s1, s2 + 1])
                     g_embs.append(memory.embs[subgoal])
 
-    replay_buffer.to(device)
-
     if cfg.main.reward in ["rnet", "graph_sig"]:
         assert replay_buffer.is_full()
         s_embs = torch.stack(s_embs).to(device)
@@ -316,9 +312,10 @@ def fill_replay_buffer(
         if cfg.main.reward == "graph_sig":
             rewards = torch.sigmoid(rewards / cfg.main.reward_sigm_temp) - 1
             rewards *= cfg.main.reward_sigm_weight
+        rewards = rewards.cpu().numpy()
         rewards *= cfg.replay_buffer.reward_scaling
         rewards += replay_buffer.rewards[:, 0]
-        replay_buffer.rewards[:, 0].copy_(rewards)
+        replay_buffer.rewards[:, 0] = rewards
 
 
 def save(save_dir, model, memory, NN):
