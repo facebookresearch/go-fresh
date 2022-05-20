@@ -133,8 +133,8 @@ class ReplayBufferFiller:
             self.g_embs.share_memory_()
 
         procs = []
-        for _ in range(self.cfg.replay_buffer.num_procs):
-            p = ctx.Process(target=self.worker_fill)
+        for proc_id in range(self.cfg.replay_buffer.num_procs):
+            p = ctx.Process(target=self.worker_fill, args=(proc_id,))
             p.start()
             procs.append(p)
 
@@ -166,7 +166,8 @@ class ReplayBufferFiller:
             self.idx.value += 1
             return i
 
-    def worker_fill(self):
+    def worker_fill(self, proc_id):
+        np.random.seed(123456 * proc_id)
         while True:
             i = self.get_safe_i()
             if i == -1:
