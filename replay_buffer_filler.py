@@ -116,6 +116,7 @@ class ReplayBufferFiller:
     def run(self):
         if self.memory is not None:
             self.memory.obss = self.memory.obss.to("cpu")
+            self.memory.embs = self.memory.embs.to(self.device)
 
         if self.cfg.main.reward in ["rnet", "graph_sig"]:
             # will compute rewards in parallel for efficiency
