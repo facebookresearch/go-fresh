@@ -167,7 +167,7 @@ class ReplayBufferFiller:
             return i
 
     def worker_fill(self, proc_id):
-        np.random.seed(123456 * proc_id)
+        np.random.seed(self.cfg.main.seed * proc_id)
         while True:
             i = self.get_safe_i()
             if i == -1:
