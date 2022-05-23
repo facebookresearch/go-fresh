@@ -10,18 +10,15 @@ env:
     action_repeat: 2
     obs:
         type: vec
-        state_size: 18
-        vec_size: 24
+        state_size: 57
+        vec_size: 78
         rgb_size: 64
-    action_dim: 6
+    action_dim: 12
 
 exploration_buffer:
-    data_dir: /checkpoint/${env:USER}/offline-gcrl/data/walker/proto/buffer
-
-eval:
-    num_episodes: 100
+    data_dir: /checkpoint/${env:USER}/offline-gcrl/data/quadruped/proto/buffer
 
 rnet:
     model:
-        remove_velocity: true
-        dims_to_keep: 15
+        remove_velocity: false
+        dims_to_keep:
