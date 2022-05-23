@@ -10,14 +10,14 @@ python main.py \
     rnet.model.feat_size=128 \
     plot.type=wandb \
     main.reward=graph_sig \
-    train.goal_strat=rb,memory \
-    main.subgoal_transitions=True,False \
-    main.reward_sigm_temp=1,3,5 \
+    train.goal_strat=rb,memory_bins \
+    main.subgoal_transitions=True \
+    main.reward_sigm_temp=0.1,0.5,1,3,5 \
     env.action_repeat=2 \
     eval.interval_epochs=20 \
-    sac.optim.batch_size=2048,512 \
-    replay_buffer.reward_scaling=0.3,1.0 \
-    sac.optim.lr=0.0005,0.0001 \
-    sac.optim.entropy.alpha=0.005,0.001 \
-    sac.optim.gamma=0.9,0.85 \
+    sac.optim.batch_size=2048,4096 \
+    replay_buffer.reward_scaling=0.3,0.8,1.0,2.0 \
+    sac.optim.lr=0.0001 \
+    sac.optim.entropy.alpha=0.005,0.001,0.0001,0.01 \
+    sac.optim.gamma=0.9 \
     --multirun \
