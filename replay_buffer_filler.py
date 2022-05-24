@@ -170,8 +170,7 @@ class ReplayBufferFiller:
             return i
 
     def worker_fill(self, proc_id):
-        assert self.cfg.main.seed > self.cfg.replay_buffer.num_procs
-        np.random.seed(self.cfg.main.seed * self.epoch + proc_id)
+        np.random.seed(proc_id + self.epoch * 123 + self.cfg.main.seed * 123456)
         while True:
             i = self.get_safe_i()
             if i == -1:
