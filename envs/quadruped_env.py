@@ -2,7 +2,7 @@ import dmc2gym
 
 from gym.wrappers.time_limit import TimeLimit
 
-import envs.quadruped_utils as utils
+from envs import quadruped_utils as utils
 
 from envs.base_wrapper import BaseWrapper
 
@@ -30,7 +30,7 @@ class QuadrupedWrapper(BaseWrapper):
         ).transpose((2, 0, 1))
 
     def oracle_distance(self, x1, x2):
-        return utils.oracle_distance(x1, x2)
+        return utils.oracle_distance(x1, x2, goal_idx=self.goal_idx)
 
     def process_info(self, info, metrics):
         super().process_info(info, metrics)
@@ -55,7 +55,9 @@ class QuadrupedWrapper(BaseWrapper):
 
 
 def make_quadruped_env(env_cfg, space_info, seed):
-    env = dmc2gym.make("quadruped", "walk", frame_skip=env_cfg.action_repeat, seed=seed)
+    env = dmc2gym.make(
+        "quadruped", "walk", frame_skip=env_cfg.action_repeat, seed=seed, camera_id=2
+    )
     env = TimeLimit(env, max_episode_steps=env_cfg.max_episode_steps)
     env = QuadrupedWrapper(env, env_cfg, space_info)
     return env
