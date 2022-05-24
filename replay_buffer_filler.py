@@ -1,6 +1,7 @@
 import torch
 import numpy as np
-import multiprocessing as mp
+
+from torch import multiprocessing as mp
 
 from envs import make_env, oracle_reward
 from rnet.utils import compute_NN
@@ -30,6 +31,7 @@ class ReplayBufferFiller:
             self.NN_dict = self.compute_NN_dict()
         elif cfg.train.goal_strat in ["one_goal", "all_goal"]:
             self.eval_goals = self.get_eval_goals()
+        self.epoch = 0
 
     def compute_NN_dict(self):
         if self.cfg.rnet.memory.directed:
@@ -115,6 +117,7 @@ class ReplayBufferFiller:
             return self.sample_goal_eval()
 
     def run(self):
+        self.epoch += 1
         if self.memory is not None:
             self.memory.obss = self.memory.obss.to("cpu")
 
@@ -167,7 +170,8 @@ class ReplayBufferFiller:
             return i
 
     def worker_fill(self, proc_id):
-        np.random.seed(self.cfg.main.seed * proc_id)
+        assert self.cfg.main.seed > self.cfg.replay_buffer.num_procs
+        np.random.seed(self.cfg.main.seed * self.epoch + proc_id)
         while True:
             i = self.get_safe_i()
             if i == -1:
