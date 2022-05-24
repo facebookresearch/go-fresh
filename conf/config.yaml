@@ -1,10 +1,10 @@
 main:
-    name: ${now:%Y%m%d-%H%M%S}_${env.id}_${main.suffix}_r${main.run}
+    name: ${now:%Y%m%d-%H%M%S}_${env.id}_${main.suffix}_s${main.seed}_r${main.run}
     suffix:
     logs_dir: /checkpoint/${env:USER}/offline-gcrl/logs/${main.name}  # store all model files
     save_interval: 100
     reward: graph  # how reward is computed. options: graph_sig, graph, rnet, oracle
-    seed: 123456
+    seed: 234
     run: 0  #dummy variable for several runs
     load_from_dir:  # load RNet model, memory and NN from a given directory
     train_until: policy  # specify which step to end training. Steps are: rnet -> memory -> NN -> policy
