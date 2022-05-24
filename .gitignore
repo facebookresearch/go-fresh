@@ -3,6 +3,8 @@ runs/
 .idea
 *.swp
 *.swo
+*.nfs*
+*.ipynb_checkpoints*
 # *.ipynb*
 
 outputs
