@@ -52,8 +52,10 @@ class BaseWrapper(gym.core.Wrapper):
             print("goals_file not found... garbage goals")
             self.set_goals(
                 {
-                    x: np.zeros((1, *self.observation_space[x].shape))
-                    for x in ["state", "image"]
+                    'state': np.zeros((1, *self.observation_space['state'].shape)),
+                    f'{self.cfg.obs_type}_obs': np.zeros(
+                        (1, *self.observation_space['obs'].shape)
+                    )
                 }
             )
         goals = self.get_goals()

@@ -12,6 +12,10 @@ def make_env(env_cfg, space_info, seed=0):
         from .walker_env import make_walker_env
 
         env = make_walker_env(env_cfg, space_info, seed)
+    elif env_cfg.id == "quadruped":
+        from .quadruped_env import make_quadruped_env
+
+        env = make_quadruped_env(env_cfg, space_info, seed)
     else:
         raise ValueError(f"wrong env name {env_cfg.id}")
     env.seed(seed)
