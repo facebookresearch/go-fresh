@@ -31,7 +31,7 @@ class ExplorationBuffer(object):
         return traj_buffer
 
     def load_data(self, data_dir):
-        self.print_fn("loading exploration buffer")
+        self.print_fn(f"loading exploration buffer from {self.cfg.data_dir}")
         ep_files = [os.path.join(data_dir, f) for f in os.listdir(data_dir)]
         # exclude hidden files
         ep_files = [f for f in ep_files if not os.path.basename(f).startswith(".")]

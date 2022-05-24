@@ -30,7 +30,10 @@ class QuadrupedWrapper(BaseWrapper):
         ).transpose((2, 0, 1))
 
     def oracle_distance(self, x1, x2):
-        return utils.oracle_distance(x1, x2, goal_idx=self.goal_idx)
+        goal_idx = None
+        if hasattr(self, "goal_idx"):
+            goal_idx = self.goal_idx
+        return utils.oracle_distance(x1, x2, goal_idx=goal_idx)
 
     def process_info(self, info, metrics):
         super().process_info(info, metrics)
