@@ -62,6 +62,8 @@ sac:
             hidden_size: 64
             n_layers: 3
             normalize: true  # divide the input by 255, except for FC head
+            remove_velocity: false
+            dims_to_keep:
     
     optim:
         lr: 0.001 

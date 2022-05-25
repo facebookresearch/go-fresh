@@ -22,3 +22,8 @@ rnet:
     model:
         remove_velocity: true
         dims_to_keep: 15
+
+sac:
+    policy:
+        head:
+            dims_to_keep: 15
