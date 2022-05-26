@@ -59,7 +59,7 @@ class FCHead(nn.Module):
         self.net = nn.Sequential(*modules)
 
     def forward(self, x):
-        return self.net(x[:, :self.obs_size])
+        return self.net(x[..., :self.obs_size])
 
 
 class RNetPlusHead(nn.Module):
