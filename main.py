@@ -104,6 +104,7 @@ def main(cfg):
 
     # setup paths and load
     rnet_path = path.join(cfg.main.logs_dir, "model.pth")
+    embs_path = path.join(cfg.main.logs_dir, "embs.pth")
     memory_path = path.join(cfg.main.logs_dir, "memory.npy")
     NN_path = path.join(cfg.main.logs_dir, "NN.npz")
     if cfg.main.load_from_dir is not None:
@@ -137,7 +138,16 @@ def main(cfg):
         return
 
     if cfg.main.reward in ["rnet", "graph", "graph_sig"]:
-        embed_expl_buffer(expl_buffer, rnet_model, device)
+        # Exploration buffer embeddings
+        if path.exists(embs_path):
+            log.info(f"Loading embeddings from {embs_path}")
+            embs = torch.load(embs_path, map_location=torch.device('cpu'))
+        else:
+            log.info("Embedding exploration_buffer")
+            embs = embed_expl_buffer(expl_buffer, rnet_model, device)
+            torch.save(embs, embs_path)
+        expl_buffer.set_embs(embs)
+
         # Memory and graph
         if path.exists(memory_path):
             log.info(f"Loading memory from {memory_path}")
