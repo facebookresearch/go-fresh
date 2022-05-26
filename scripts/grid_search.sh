@@ -2,7 +2,7 @@
 
 python main.py \
     +exp=walker_rnet_thresh \
-    main.suffix="unsup-grid-vec" \
+    main.suffix="unsup-grid-vec-\${train.goal_strat}-remove_velocity" \
     main.load_from_dir='/checkpoint/sainbar/offline-gcrl/logs/20220509-173335_walker_memonly_thresh2_neg0_skip0.05' \
     rnet.model.remove_velocity=True \
     rnet.model.hidden_size=128 \
@@ -10,6 +10,7 @@ python main.py \
     rnet.model.feat_size=128 \
     env.action_repeat=2 \
     main.reward=graph_sig \
+    sac.policy.head.remove_velocity=True \
     main.run=0,1,2 \
     main.seed=0,1,2 \
     plot.type=wandb \

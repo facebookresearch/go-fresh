@@ -48,8 +48,10 @@ class ValueNetwork(nn.Module):
 class FCHead(nn.Module):
     def __init__(self, obs_shape, cfg):
         super(FCHead, self).__init__()
-        obs_size = obs_shape[0]
-        modules = [nn.Linear(obs_size, cfg.hidden_size), nn.Tanh()]
+        self.obs_size = obs_shape[0]
+        if cfg.remove_velocity:
+            self.obs_size = cfg.dims_to_keep
+        modules = [nn.Linear(self.obs_size, cfg.hidden_size), nn.Tanh()]
         for _ in range(1, cfg.n_layers - 1):
             modules.append(nn.Linear(cfg.hidden_size, cfg.hidden_size))
             modules.append(nn.Tanh())
@@ -57,7 +59,7 @@ class FCHead(nn.Module):
         self.net = nn.Sequential(*modules)
 
     def forward(self, x):
-        return self.net(x)
+        return self.net(x[:, :self.obs_size])
 
 
 class RNetPlusHead(nn.Module):
