@@ -32,6 +32,7 @@ class ReplayBufferFiller:
         elif cfg.train.goal_strat in ["one_goal", "all_goal"]:
             self.eval_goals = self.get_eval_goals()
         self.epoch = 0
+        self.frame_stack = cfg.env.frame_stack
 
     def compute_NN_dict(self):
         if self.cfg.rnet.memory.directed:
@@ -177,8 +178,8 @@ class ReplayBufferFiller:
                 break
             g_obs, g_NN, g_emb, g_state = self.sample_goal()
 
-            s_obs, s1, s2 = self.expl_buffer.get_random_obs(not_last=True)
-            next_s_obs = self.expl_buffer.get_obs(s1, s2 + 1)
+            s_obs, s1, s2 = self.expl_buffer.get_random_obs(not_last=True, frame_stack=self.frame_stack)
+            next_s_obs = self.expl_buffer.get_obs(s1, s2 + 1, frame_stack=self.frame_stack)
             if self.cfg.main.reward in ["oracle_dense", "oracle_sparse"]:
                 reward = oracle_reward(
                     self.cfg, self.expl_buffer.states[s1, s2 + 1], g_state
@@ -190,12 +191,18 @@ class ReplayBufferFiller:
             if self.cfg.main.reward in ["graph", "graph_sig"]:
                 s_NN = self.NN["outgoing"][s1, s2 + 1]
                 reward = -self.memory.dist[s_NN, g_NN]
-            state = np.stack((s_obs, g_obs))
-            next_state = np.stack((self.expl_buffer.get_obs(s1, s2 + 1), g_obs))
+            if self.frame_stack == 1:
+                state = np.stack((s_obs, g_obs))
+                next_state = np.stack((next_s_obs, g_obs))
+            else:
+                state = np.stack(s_obs + [g_obs])  # e.g. last 3 frames and the goal frame
+                next_state = np.stack(next_s_obs + [g_obs])
+
             action = self.expl_buffer.actions[s1, s2 + 1]
             self.replay_buffer.write(i, state, action, reward, next_state)
 
             if self.cfg.main.subgoal_transitions:
+                assert self.frame_stack == 1, "stacking not supported yet"
                 assert self.cfg.main.reward in ["graph", "graph_sig"]
                 subgoals = self.memory.retrieve_path(s_NN, g_NN)
                 if self.cfg.train.goal_strat == "memory":

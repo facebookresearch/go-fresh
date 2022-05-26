@@ -48,11 +48,11 @@ class ExplorationBuffer(object):
     def __len__(self):
         return self.obss.shape[0]
 
-    def get_random_obs(self, not_last=False):
+    def get_random_obs(self, not_last=False, frame_stack=1):
         max_step = self.traj_len - 1 if not_last else self.traj_len
         traj_idx = np.random.randint(len(self))
-        step = np.random.randint(max_step)
-        return self.get_obs(traj_idx, step), traj_idx, step
+        step = np.random.randint(frame_stack - 1, max_step)
+        return self.get_obs(traj_idx, step, frame_stack=frame_stack), traj_idx, step
 
     def sample(self, range=None):
         if range is None:
@@ -65,9 +65,17 @@ class ExplorationBuffer(object):
         assert traj_idx < len(self), "invalid traj_idx"
         return {"obs": self.obss[traj_idx], "state": self.states[traj_idx]}
 
-    def get_obs(self, traj_idx, step):
+    def get_obs(self, traj_idx, step, frame_stack=1):
         assert step < self.traj_len, "invalid step"
-        return self.get_traj(traj_idx)["obs"][step]
+        if frame_stack == 1:
+            return self.get_traj(traj_idx)["obs"][step]
+        else:
+            obs_stack = []
+            for t in range(frame_stack):
+                stack_step = step + t - frame_stack + 1
+                assert stack_step >= 0
+                obs_stack.append(self.get_traj(traj_idx)["obs"][stack_step])
+            return obs_stack
 
     def get_state(self, traj_idx, step):
         assert step < self.traj_len, "invalid step"

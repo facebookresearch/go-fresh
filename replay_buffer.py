@@ -10,9 +10,9 @@ class ReplayBuffer(object):
         self.capacity = cfg.capacity
         self.space_info = space_info
         self.device = "cpu"
-
+        nframes = cfg.frame_stack + 1  # 1 extra for goal
         self.states = torch.empty(
-            (self.capacity, 2, *space_info["shape"]["obs"]),
+            (self.capacity, nframes, *space_info["shape"]["obs"]),
             dtype=utils.TORCH_DTYPE[space_info["type"]["obs"]]
         )
         self.next_states = torch.empty_like(self.states)

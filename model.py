@@ -156,10 +156,11 @@ class QNetwork(nn.Module):
     def __init__(self, obs_shape, num_actions, cfg):
         super(QNetwork, self).__init__()
         head_cfg = cfg.head
+        self.frame_stack = cfg.frame_stack
         self.obs_head = _HEADS[head_cfg.type](obs_shape, head_cfg)
         self.goal_head = _HEADS[head_cfg.type](obs_shape, head_cfg)
 
-        num_inputs = head_cfg.out_size * 2
+        num_inputs = head_cfg.out_size * (1 + self.frame_stack)
         hidden_dim = cfg.hidden_size
 
         # Q1 architecture
@@ -175,8 +176,12 @@ class QNetwork(nn.Module):
         self.apply(weights_init_)
 
     def forward(self, state, action):
-        obs_feat = self.obs_head(state[:, 0])
-        goal_feat = self.goal_head(state[:, 1])
+        if self.frame_stack == 1:
+            obs_feat = self.obs_head(state[:, 0])
+        else:
+            obs_feat = self.obs_head(state[:, :self.frame_stack])  # B x frames x feat_dim
+            obs_feat = obs_feat.flatten(1)
+        goal_feat = self.goal_head(state[:, -1])
         xu = torch.cat([obs_feat, goal_feat, action], 1)
 
         x1 = F.relu(self.linear1(xu))
@@ -192,11 +197,12 @@ class QNetwork(nn.Module):
 class GaussianPolicy(nn.Module):
     def __init__(self, obs_shape, num_actions, cfg):
         super(GaussianPolicy, self).__init__()
+        self.frame_stack = cfg.frame_stack
         head_cfg = cfg.head
         self.obs_head = _HEADS[head_cfg.type](obs_shape, head_cfg)
         self.goal_head = _HEADS[head_cfg.type](obs_shape, head_cfg)
 
-        num_inputs = head_cfg.out_size * 2
+        num_inputs = head_cfg.out_size * (1 + self.frame_stack)
         hidden_dim = cfg.hidden_size
 
         self.linear1 = nn.Linear(num_inputs, hidden_dim)
@@ -211,8 +217,12 @@ class GaussianPolicy(nn.Module):
         self.action_bias = torch.tensor(0.0)
 
     def forward(self, state):
-        obs_feat = self.obs_head(state[:, 0])
-        goal_feat = self.goal_head(state[:, 1])
+        if self.frame_stack == 1:
+            obs_feat = self.obs_head(state[:, 0])
+        else:
+            obs_feat = self.obs_head(state[:, :self.frame_stack])  # B x frames x feat_dim
+            obs_feat = obs_feat.flatten(1)
+        goal_feat = self.goal_head(state[:, -1])
         x = torch.cat([obs_feat, goal_feat], 1)
 
         x = F.relu(self.linear1(x))
