@@ -13,17 +13,8 @@ env:
         state_size: 18
         vec_size: 24
         rgb_size: 64
+        no_velocity_size: 15
     action_dim: 6
 
 exploration_buffer:
     data_dir: /checkpoint/${env:USER}/offline-gcrl/data/walker/proto/buffer
-
-rnet:
-    model:
-        remove_velocity: true
-        dims_to_keep: 15
-
-sac:
-    policy:
-        head:
-            dims_to_keep: 15

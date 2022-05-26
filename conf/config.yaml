@@ -29,6 +29,7 @@ env:
         state_size:
         vec_size:
         rgb_size:
+        no_velocity_size:
     action_dim:
 
 exploration_buffer:
@@ -63,7 +64,7 @@ sac:
             n_layers: 3
             normalize: true  # divide the input by 255, except for FC head
             remove_velocity: false
-            dims_to_keep:
+            dims_to_keep: ${env.obs.no_velocity_size}
     
     optim:
         lr: 0.001 
@@ -87,7 +88,7 @@ rnet:
         n_layers: 3  # of the feature encoder
         comp_n_layers: 2  # of the net comparator
         remove_velocity: true #remove velocity for maze
-        dims_to_keep:
+        dims_to_keep: ${env.obs.no_velocity_size}
     dataset:
         thresh: 10
         neg_thresh: 0  # sample negative pairs within this distance
