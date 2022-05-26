@@ -1,3 +1,4 @@
+from gym.wrappers import FrameStack
 from .base_wrapper import NormalizeActions
 from .maze_utils import oracle_distance as maze_distance
 from .walker_utils import oracle_distance as walker_distance

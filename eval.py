@@ -66,10 +66,17 @@ def worker_eval(cfg, space_info, i, buffers, barriers, n_eval_done):
         barriers["sta"].wait()
         goal_idx = cfg.eval.goal_idx if cfg.train.goal_strat == "one_goal" else None
         obs = env.reset(goal_idx=goal_idx)
+        if cfg.env.frame_stack > 1:
+            obs_stack = [torch.from_numpy(obs["obs"])] * cfg.env.frame_stack
         num_steps = 0
         while n_eval_done.value < cfg.eval.num_episodes:
-            buffers["obs"][i, 0] = torch.from_numpy(obs["obs"])
-            buffers["obs"][i, 1] = torch.from_numpy(obs["goal_obs"])
+            if cfg.env.frame_stack == 1:
+                buffers["obs"][i, 0] = torch.from_numpy(obs["obs"])
+            else:
+                obs_stack.pop(0)
+                obs_stack.append(torch.from_numpy(obs["obs"]))
+                buffers["obs"][i, :cfg.env.frame_stack] = torch.stack(obs_stack)
+            buffers["obs"][i, -1] = torch.from_numpy(obs["goal_obs"])
             barriers["obs"].wait()
             barriers["act"].wait()
             obs, _, _, info = env.step(buffers["act"][i])
@@ -85,6 +92,8 @@ def worker_eval(cfg, space_info, i, buffers, barriers, n_eval_done):
                     buffers[k][i] = v
 
                 obs = env.reset(goal_idx=goal_idx)
+                if cfg.env.frame_stack > 1:
+                    obs_stack = [torch.from_numpy(obs["obs"])] * cfg.env.frame_stack
                 num_steps = 0
             else:
                 for k in info:
@@ -113,7 +122,7 @@ def create_mputils(cfg, space_info, ctx):
     env.close()
 
     buffers = {}
-    buffers["obs"] = torch.zeros((n, 2, *space_info["shape"]["obs"]))
+    buffers["obs"] = torch.zeros((n, 1 + cfg.env.frame_stack, *space_info["shape"]["obs"]))
     buffers["final_obs"] = torch.zeros(
         (cfg.eval.num_episodes, 2, *space_info["shape"]["obs"])
     )
