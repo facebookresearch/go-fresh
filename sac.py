@@ -1,9 +1,10 @@
 import os
 import logging
-import torch
-
-import torch.nn.functional as F
 import numpy as np
+import torch
+import torch.nn.functional as F
+
+from tqdm import tqdm
 from torch.optim import Adam
 
 from model import GaussianPolicy, QNetwork, DeterministicPolicy
@@ -160,7 +161,7 @@ class SAC(object):
     def train_one_epoch(self, replay_buffer):
         self.train()
         stats = {}
-        for i in range(self.cfg.optim.num_updates_per_epoch):
+        for i in tqdm(range(self.cfg.optim.num_updates_per_epoch), desc="train policy"):
             out = self.update_parameters(replay_buffer, self.cfg.optim.batch_size, i)
             for k, v in out.items():
                 if k not in stats:
