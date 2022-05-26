@@ -178,8 +178,12 @@ class ReplayBufferFiller:
                 break
             g_obs, g_NN, g_emb, g_state = self.sample_goal()
 
-            s_obs, s1, s2 = self.expl_buffer.get_random_obs(not_last=True, frame_stack=self.frame_stack)
-            next_s_obs = self.expl_buffer.get_obs(s1, s2 + 1, frame_stack=self.frame_stack)
+            s_obs, s1, s2 = self.expl_buffer.get_random_obs(
+                not_last=True, frame_stack=self.frame_stack
+            )
+            next_s_obs = self.expl_buffer.get_obs(
+                s1, s2 + 1, frame_stack=self.frame_stack
+            )
             if self.cfg.main.reward in ["oracle_dense", "oracle_sparse"]:
                 reward = oracle_reward(
                     self.cfg, self.expl_buffer.states[s1, s2 + 1], g_state
@@ -195,7 +199,9 @@ class ReplayBufferFiller:
                 state = np.stack((s_obs, g_obs))
                 next_state = np.stack((next_s_obs, g_obs))
             else:
-                state = np.stack(s_obs + [g_obs])  # e.g. last 3 frames and the goal frame
+                state = np.stack(
+                    s_obs + [g_obs]
+                )  # e.g. last 3 frames and the goal frame
                 next_state = np.stack(next_s_obs + [g_obs])
 
             action = self.expl_buffer.actions[s1, s2 + 1]
