@@ -157,8 +157,9 @@ class QNetwork(nn.Module):
         super(QNetwork, self).__init__()
         head_cfg = cfg.head
         self.frame_stack = cfg.frame_stack
-        self.obs_head = _HEADS[head_cfg.type](obs_shape, head_cfg)
-        self.goal_head = _HEADS[head_cfg.type](obs_shape, head_cfg)
+        self.obs_shape = obs_shape
+        self.obs_head = _HEADS[head_cfg.type](self.obs_shape, head_cfg)
+        self.goal_head = _HEADS[head_cfg.type](self.obs_shape, head_cfg)
 
         num_inputs = head_cfg.out_size * (1 + self.frame_stack)
         hidden_dim = cfg.hidden_size
@@ -176,10 +177,12 @@ class QNetwork(nn.Module):
         self.apply(weights_init_)
 
     def forward(self, state, action):
-        obs_feat = []
-        for i in range(self.frame_stack):
-            obs_feat.append(self.obs_head(state[:, i]))
-        obs_feat = torch.cat(obs_feat, 1)
+        bsz = state.size(0)
+        state_rs = state[:, :self.frame_stack].reshape(
+            bsz * self.frame_stack, *self.obs_shape
+        )
+        obs_feat = self.obs_head(state_rs)
+        obs_feat = obs_feat.view(bsz, self.frame_stack, -1).flatten(1)
         goal_feat = self.goal_head(state[:, -1])
         xu = torch.cat([obs_feat, goal_feat, action], 1)
 
@@ -196,10 +199,11 @@ class QNetwork(nn.Module):
 class GaussianPolicy(nn.Module):
     def __init__(self, obs_shape, num_actions, cfg):
         super(GaussianPolicy, self).__init__()
-        self.frame_stack = cfg.frame_stack
         head_cfg = cfg.head
-        self.obs_head = _HEADS[head_cfg.type](obs_shape, head_cfg)
-        self.goal_head = _HEADS[head_cfg.type](obs_shape, head_cfg)
+        self.obs_shape = obs_shape
+        self.frame_stack = cfg.frame_stack
+        self.obs_head = _HEADS[head_cfg.type](self.obs_shape, head_cfg)
+        self.goal_head = _HEADS[head_cfg.type](self.obs_shape, head_cfg)
 
         num_inputs = head_cfg.out_size * (1 + self.frame_stack)
         hidden_dim = cfg.hidden_size
@@ -216,10 +220,12 @@ class GaussianPolicy(nn.Module):
         self.action_bias = torch.tensor(0.0)
 
     def forward(self, state):
-        obs_feat = []
-        for i in range(self.frame_stack):
-            obs_feat.append(self.obs_head(state[:, i]))
-        obs_feat = torch.cat(obs_feat, 1)
+        bsz = state.size(0)
+        state_rs = state[:, :self.frame_stack].reshape(
+            bsz * self.frame_stack, *self.obs_shape
+        )
+        obs_feat = self.obs_head(state_rs)
+        obs_feat = obs_feat.view(bsz, self.frame_stack, -1).flatten(1)
         goal_feat = self.goal_head(state[:, -1])
         x = torch.cat([obs_feat, goal_feat], 1)
 
