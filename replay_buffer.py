@@ -10,9 +10,9 @@ class ReplayBuffer(object):
         self.capacity = cfg.capacity
         self.space_info = space_info
         self.device = "cpu"
-        nframes = cfg.frame_stack + 1  # 1 extra for goal
+        self.nframes = cfg.frame_stack + 1  # 1 extra for goal
         self.states = torch.empty(
-            (self.capacity, nframes, *space_info["shape"]["obs"]),
+            (self.capacity, self.nframes, *space_info["shape"]["obs"]),
             dtype=utils.TORCH_DTYPE[space_info["type"]["obs"]]
         )
         self.next_states = torch.empty_like(self.states)
@@ -23,10 +23,11 @@ class ReplayBuffer(object):
 
     def write(self, i, state, action, reward, next_state):
         assert i < self.capacity
-        self.states[i] = torch.from_numpy(state)
         self.actions[i] = torch.from_numpy(action)
         self.rewards[i] = self.cfg.reward_scaling * reward
-        self.next_states[i] = torch.from_numpy(next_state)
+        for j in range(self.nframes):
+            self.states[i, j] = torch.from_numpy(state[j])
+            self.next_states[i, j] = torch.from_numpy(next_state[j])
 
     def sample(self, batch_size):
         idxs = np.random.randint(0, len(self), size=batch_size)

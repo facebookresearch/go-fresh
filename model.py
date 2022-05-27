@@ -176,11 +176,10 @@ class QNetwork(nn.Module):
         self.apply(weights_init_)
 
     def forward(self, state, action):
-        if self.frame_stack == 1:
-            obs_feat = self.obs_head(state[:, 0])
-        else:
-            obs_feat = self.obs_head(state[:, :self.frame_stack])  # B x frames x feat_dim
-            obs_feat = obs_feat.flatten(1)
+        obs_feat = []
+        for i in range(self.frame_stack):
+            obs_feat.append(self.obs_head(state[:, i]))
+        obs_feat = torch.cat(obs_feat, 1)
         goal_feat = self.goal_head(state[:, -1])
         xu = torch.cat([obs_feat, goal_feat, action], 1)
 
@@ -217,11 +216,10 @@ class GaussianPolicy(nn.Module):
         self.action_bias = torch.tensor(0.0)
 
     def forward(self, state):
-        if self.frame_stack == 1:
-            obs_feat = self.obs_head(state[:, 0])
-        else:
-            obs_feat = self.obs_head(state[:, :self.frame_stack])  # B x frames x feat_dim
-            obs_feat = obs_feat.flatten(1)
+        obs_feat = []
+        for i in range(self.frame_stack):
+            obs_feat.append(self.obs_head(state[:, i]))
+        obs_feat = torch.cat(obs_feat, 1)
         goal_feat = self.goal_head(state[:, -1])
         x = torch.cat([obs_feat, goal_feat], 1)
 
