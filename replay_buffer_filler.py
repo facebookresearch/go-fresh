@@ -219,3 +219,27 @@ class ReplayBufferFiller:
                     if self.cfg.main.reward == "graph_sig":
                         self.s_embs[i] = self.expl_buffer.embs[s1, s2 + 1]
                         self.g_embs[i] = self.memory.embs[subgoal]
+
+            if self.cfg.main.edge_transitions:
+                assert self.cfg.main.reward in ["graph", "graph_sig"]
+                path = self.memory.retrieve_path(s_NN, g_NN)
+                for j in range(len(path) - 1):
+                    i = self.get_safe_i()
+                    if i == -1:
+                        break
+                    trans_list = self.memory.edge2rb[path[j], path[j + 1]]
+                    s1, s2 = trans_list[np.random.randint(len(trans_list))]
+                    s_obs = self.expl_buffer.get_obs(
+                        s1, s2, frame_stack=self.frame_stack
+                    )
+                    next_s_obs = self.expl_buffer.get_obs(
+                        s1, s2 + 1, frame_stack=self.frame_stack
+                    )
+                    reward = -self.memory.dist[path[j + 1], g_NN]
+                    state = self.process_obs(s_obs, g_obs)
+                    next_state = self.process_obs(next_s_obs, g_obs)
+                    action = self.expl_buffer.actions[s1, s2 + 1]
+                    self.replay_buffer.write(i, state, action, reward, next_state)
+                    if self.cfg.main.reward == "graph_sig":
+                        self.s_embs[i] = self.expl_buffer.embs[s1, s2 + 1]
+                        self.g_embs[i] = g_emb

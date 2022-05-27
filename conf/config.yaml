@@ -11,6 +11,7 @@ main:
     reward_sigm_temp: 1.0  # temperature for sigmoid reward
     reward_sigm_weight: 1.0  # the weight of rnet sigmoid part in reward
     subgoal_transitions: false
+    edge_transitions: false
 
 plot:
     type: tb  # where to log. options: tb, wandb, none
