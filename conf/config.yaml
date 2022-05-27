@@ -31,6 +31,7 @@ env:
         rgb_size:
         no_velocity_size:
     action_dim:
+    frame_stack: 1  # number of frames to stack. only applies to the current obs in policy and critic.
 
 exploration_buffer:
     data_dir:
@@ -40,6 +41,7 @@ replay_buffer:
     capacity: 100000
     reward_scaling: 0.01
     num_procs: 10
+    frame_stack: ${env.frame_stack}  # must match
 
 optim:
     num_epochs: 1001
@@ -65,6 +67,7 @@ sac:
             normalize: true  # divide the input by 255, except for FC head
             remove_velocity: false
             dims_to_keep: ${env.obs.no_velocity_size}
+        frame_stack: ${env.frame_stack}  # must match
     
     optim:
         lr: 0.001 

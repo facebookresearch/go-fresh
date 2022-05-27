@@ -32,6 +32,7 @@ class ReplayBufferFiller:
         elif cfg.train.goal_strat in ["one_goal", "all_goal"]:
             self.eval_goals = self.get_eval_goals()
         self.epoch = 0
+        self.frame_stack = cfg.env.frame_stack
 
     def compute_NN_dict(self):
         if self.cfg.rnet.memory.directed:
@@ -169,6 +170,11 @@ class ReplayBufferFiller:
             self.idx.value += 1
             return i
 
+    def process_obs(self, s_obs, g_obs):
+        if self.frame_stack == 1:
+            return np.stack((s_obs, g_obs))
+        return np.stack(s_obs + [g_obs])  # e.g. last 3 frames and the goal frame
+
     def worker_fill(self, proc_id):
         np.random.seed(proc_id + self.epoch * 123 + self.cfg.main.seed * 123456)
         while True:
@@ -177,8 +183,12 @@ class ReplayBufferFiller:
                 break
             g_obs, g_NN, g_emb, g_state = self.sample_goal()
 
-            s_obs, s1, s2 = self.expl_buffer.get_random_obs(not_last=True)
-            next_s_obs = self.expl_buffer.get_obs(s1, s2 + 1)
+            s_obs, s1, s2 = self.expl_buffer.get_random_obs(
+                not_last=True, frame_stack=self.frame_stack
+            )
+            next_s_obs = self.expl_buffer.get_obs(
+                s1, s2 + 1, frame_stack=self.frame_stack
+            )
             if self.cfg.main.reward in ["oracle_dense", "oracle_sparse"]:
                 reward = oracle_reward(
                     self.cfg, self.expl_buffer.states[s1, s2 + 1], g_state
@@ -190,8 +200,8 @@ class ReplayBufferFiller:
             if self.cfg.main.reward in ["graph", "graph_sig"]:
                 s_NN = self.NN["outgoing"][s1, s2 + 1]
                 reward = -self.memory.dist[s_NN, g_NN]
-            state = np.stack((s_obs, g_obs))
-            next_state = np.stack((self.expl_buffer.get_obs(s1, s2 + 1), g_obs))
+            state = self.process_obs(s_obs, g_obs)
+            next_state = self.process_obs(next_s_obs, g_obs)
             action = self.expl_buffer.actions[s1, s2 + 1]
             self.replay_buffer.write(i, state, action, reward, next_state)
 
@@ -206,8 +216,8 @@ class ReplayBufferFiller:
                         break
                     reward = -self.memory.dist[s_NN, subgoal]
                     subgoal_obs = self.memory.get_obs(subgoal)
-                    state = np.stack((s_obs, subgoal_obs))
-                    next_state = np.stack((next_s_obs, subgoal_obs))
+                    state = self.process_obs(s_obs, subgoal_obs)
+                    next_state = self.process_obs(next_s_obs, subgoal_obs)
                     self.replay_buffer.write(i, state, action, reward, next_state)
                     if self.cfg.main.reward == "graph_sig":
                         self.s_embs[i] = self.expl_buffer.embs[s1, s2 + 1]
