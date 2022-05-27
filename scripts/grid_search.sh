@@ -14,7 +14,7 @@ python main.py \
     main.run=0,1,2 \
     plot.type=wandb \
     train.goal_strat=rb,memory_bins \
-    main.subgoal_transitions=False \
+    main.subgoal_transitions=True \
     main.reward_sigm_temp=1 \
     eval.interval_epochs=20 \
     sac.optim.batch_size=2048 \
@@ -22,5 +22,4 @@ python main.py \
     sac.optim.lr=0.0001 \
     sac.optim.entropy.alpha=0.001 \
     sac.optim.gamma=0.9 \
-    hydra.launcher.partition=devlab \
     --multirun \
