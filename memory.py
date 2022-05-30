@@ -84,23 +84,23 @@ class Memory:
 class GraphMemory(Memory):
     def __init__(self, cfg, space_info):
         super().__init__(cfg, space_info)
-        self.adj_matrix = np.zeros((cfg.capacity, cfg.capacity), dtype=bool)
 
-    def add(self, obs, state):
-        i = super().add(obs, state)
-        self.adj_matrix[i, :] = False
-        self.adj_matrix[:, i] = False
-        return i
+    def init_adj_matrix(self, N=None):
+        if N is None:
+            N = self.cfg.capacity
+        self.adj_matrix = np.zeros((N, N), dtype=bool)
 
     def transition2edges(self, prev_NNi, prev_NNo, NNi, NNo):
+        edges_to_add = []
         if not self.cfg.directed:
             assert prev_NNi == prev_NNo
             assert NNi == NNo
-            self.add_edge(prev_NNi, NNi)
+            edges_to_add = [(prev_NNi, NNi), (NNi, prev_NNi)]
         else:
-            self.add_edge(prev_NNi, prev_NNo)
-            self.add_edge(NNi, NNo)
-            self.add_edge(prev_NNi, NNo)
+            edges_to_add = [(prev_NNi, prev_NNo), (NNi, NNo), (prev_NNi, NNo)]
+        for edge in edges_to_add:
+            self.add_edge(*edge)
+        return edges_to_add
 
     def add_edge(self, i, j):
         if not i == -1 and not j == -1 and not i == j:

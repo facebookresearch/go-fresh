@@ -7,7 +7,7 @@ main:
     seed: 234
     run: 0  #dummy variable for several runs
     load_from_dir:  # load RNet model, memory and NN from a given directory
-    train_until: policy  # specify which step to end training. Steps are: rnet -> memory -> NN -> policy
+    train_until: policy  # specify which step to end training. Steps are: rnet -> memory -> policy
     reward_sigm_temp: 1.0  # temperature for sigmoid reward
     reward_sigm_weight: 1.0  # the weight of rnet sigmoid part in reward
     subgoal_transitions: false
@@ -111,9 +111,9 @@ rnet:
     memory:
         thresh: 0
         capacity: 500
-        skip: 1
+        node_skip: 0.01 # percentage of expl_buffer obs NOT to skip
+        edge_skip: 0.01 # percentage of expl_buffer transitions NOT to skip
         NN_batch_size: 1001
-        skip_traj: 0.05 #percentage of trajectories NOT to skip
         directed: false
 
 hydra:

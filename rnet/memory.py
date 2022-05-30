@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+import tqdm
 
 import utils
 
@@ -15,11 +16,13 @@ class RNetMemory(GraphMemory):
             (cfg.capacity, *space_info["shape"]["obs"]), dtype=obs_dtype
         ).to(device)
         self.embs = torch.zeros((cfg.capacity, feat_size)).to(device)
+        self.nn_out = None
+        self.nn_in = None
+        self.edge2rb = None
 
     def add(self, obs, state, emb):
         i = super().add(obs, state)
         self.embs[i] = emb
-        return i
 
     def add_first_obs(self, rnet_model, obs, state):
         assert not rnet_model.training
@@ -48,9 +51,9 @@ class RNetMemory(GraphMemory):
     def compute_novelty(self, rnet_model, e, incoming_dir=False):
         assert not rnet_model.training
         rnet_values = self.compare_embeddings(e, rnet_model, incoming_dir=incoming_dir)
-        rnet_max, NN = torch.max(rnet_values, dim=0)
+        rnet_max, _ = torch.max(rnet_values, dim=0)
         nov = -(rnet_max.item() - self.cfg.thresh)
-        return nov, NN.item()
+        return nov
 
     def compute_rnet_values(self, rnet_model):
         rnet_values = np.zeros((len(self), len(self)))
@@ -75,6 +78,86 @@ class RNetMemory(GraphMemory):
                 batch_e, memory_batch, batchwise=True, reverse_dir=incoming_dir
             )[:, 0]
         return rnet_vals.view(bsz, memsz).max(dim=1)[1].cpu()
+
+    def build(self, model, expl_buffer):
+        assert not model.training
+        x = torch.from_numpy(expl_buffer.get_obs(0, 0)).to(self.device)
+        self.add_first_obs(model, x, expl_buffer.get_state(0, 0))
+
+        obs_count = 0
+        for traj_idx in tqdm.tqdm(range(len(expl_buffer)), desc="Updating Memory"):
+            traj = expl_buffer.get_traj(traj_idx)
+            for i in range(expl_buffer.traj_len):
+                if np.random.random() > self.cfg.node_skip:
+                    continue
+                obs_count += 1
+                e = expl_buffer.embs[traj_idx, i].unsqueeze(0)
+                novelty_o = self.compute_novelty(model, e)
+                if self.cfg.directed:
+                    novelty_i = self.compute_novelty(model, e, incoming_dir=True)
+                else:
+                    novelty_i = novelty_o
+
+                if novelty_o > 0 and novelty_i > 0:
+                    x = torch.from_numpy(traj["obs"][i]).to(self.device)
+                    _ = self.add(x, traj["state"][i], e)
+        print("num obs seen:", obs_count)
+        print("memory_len :", len(self))
+
+    def compute_NN(self, embs, model):
+        num_trajs, traj_len = embs.shape[0], embs.shape[1]
+        self.embs = self.embs.to(self.device)
+        nn = {"out": np.zeros((num_trajs, traj_len), dtype=int)}
+        if self.cfg.directed:
+            nn["in"] = np.zeros((num_trajs, traj_len), dtype=int)
+        bsz = self.cfg.NN_batch_size
+        for traj_idx in tqdm.tqdm(range(num_trajs), desc="computing NN"):
+            for i in range(0, traj_len, bsz):
+                j = min(i + bsz, traj_len)
+                nn["out"][traj_idx, i:j] = self.get_batch_NN(
+                    model, embs[traj_idx, i:j]
+                )
+                if self.cfg.directed:
+                    nn["in"][traj_idx, i:j] = self.get_batch_NN(
+                        model, embs[traj_idx, i:j], incoming_dir=True
+                    )
+        return nn
+
+    def set_nn(self, nn):
+        self.nn_out = nn["out"]
+        if self.cfg.directed:
+            self.nn_in = nn["in"]
+
+    def compute_edges(self, model):
+        self.edge2rb = {}
+        num_trajs, traj_len = self.nn_out.shape
+        self.init_adj_matrix(N=len(self))
+        for i in tqdm.tqdm(range(num_trajs), desc="computing edges"):
+            for j in range(traj_len - 1):
+                if np.random.random() > self.cfg.edge_skip:
+                    continue
+                prev_NNi = (
+                    self.nn_in[i, j] if self.cfg.directed else self.nn_out[i, j]
+                )
+                prev_NNo = self.nn_out[i, j]
+                NNi = (
+                    self.nn_in[i, j + 1] if self.cfg.directed else (
+                        self.nn_out[i, j + 1]
+                    )
+                )
+                NNo = self.nn_out[i, j + 1]
+                edges = self.transition2edges(prev_NNi, prev_NNo, NNi, NNo)
+                for edge in edges:
+                    if edge[0] == edge[1]:
+                        continue
+                    if edge not in self.edge2rb:
+                        self.edge2rb[edge] = []
+                    self.edge2rb[edge].append((i, j))
+
+        # make sure any memory node can be reached from any other
+        model.eval()
+        self.connect_graph(model)
+        self.compute_dist()
 
     def get_component_shortest_edge(
         self, component_idx, rnet_model, mask=None, incoming_dir=False
@@ -135,10 +218,16 @@ class RNetMemory(GraphMemory):
 
     def dict_to_save(self):
         to_save = super().dict_to_save()
-        to_save["embs"] = self.to_numpy(self.embs[: len(self)])
+        to_save["embs"] = self.to_numpy(self.embs[:len(self)])
+        to_save["nn_out"] = self.nn_out
+        to_save["nn_in"] = self.nn_in
+        to_save["edge2rb"] = self.edge2rb
         return to_save
 
     def load(self, path):
         memory = super().load(path)
         self.embs = torch.from_numpy(memory.get("embs"))
+        self.nn_out = memory.get("nn_out")
+        self.nn_in = memory.get("nn_in")
+        self.edge2rb = memory.get("edge2rb")
         return memory
