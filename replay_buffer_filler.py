@@ -224,10 +224,13 @@ class ReplayBufferFiller:
                 assert self.cfg.main.reward in ["graph", "graph_sig"]
                 path = self.memory.retrieve_path(s_NN, g_NN)
                 for j in range(len(path) - 1):
+                    edge = (path[j], path[j + 1])
+                    if edge not in self.memory.edge2rb:
+                        continue
                     i = self.get_safe_i()
                     if i == -1:
                         break
-                    trans_list = self.memory.edge2rb[path[j], path[j + 1]]
+                    trans_list = self.memory.edge2rb[edge]
                     s1, s2 = trans_list[np.random.randint(len(trans_list))]
                     s_obs = self.expl_buffer.get_obs(
                         s1, s2, frame_stack=self.frame_stack
