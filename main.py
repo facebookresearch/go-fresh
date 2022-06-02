@@ -139,7 +139,7 @@ def main(cfg):
             log.info("Embedding exploration_buffer")
             embs = embed_expl_buffer(expl_buffer, rnet_model, device)
             torch.save(embs, embs_path)
-        expl_buffer.set_embs(embs.to(device))
+        expl_buffer.set_embs(embs)
 
         # Memory and graph
         memory = RNetMemory(cfg.rnet.memory, space_info, rnet_model.feat_size, device)
