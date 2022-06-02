@@ -60,12 +60,17 @@ class ReplayBufferFiller:
         return eval_goals
 
     def get_goal_rb(self, g1, g2, g_obs):
-        g_emb = self.expl_buffer.embs[g1, g2]
         g_state = self.expl_buffer.states[g1, g2]
-        if self.cfg.rnet.memory.directed:
-            g_NN = self.memory.nn_in[g1, g2]
-        else:
-            g_NN = self.memory.nn_out[g1, g2]
+        g_emb = None
+        if self.cfg.main.reward in ["rnet", "graph_sig"]:
+            g_emb = self.expl_buffer.embs[g1, g2]
+
+        g_NN = None
+        if self.cfg.main.reward in ["graph", "graph_sig"]:
+            if self.cfg.rnet.memory.directed:
+                g_NN = self.memory.nn_in[g1, g2]
+            else:
+                g_NN = self.memory.nn_out[g1, g2]
         return g_obs, g_NN, g_emb, g_state
 
     def sample_goal_rb(self):
@@ -81,20 +86,29 @@ class ReplayBufferFiller:
         else:
             raise ValueError(f"invalid goal_strat: {self.cfg.train.goal_strat}")
         g_obs = self.eval_goals["obs"][goal_idx]
-        g_emb = self.eval_goals["embs"][goal_idx]
         g_state = self.eval_goals["states"][goal_idx]
-        if self.cfg.rnet.memory.directed:
-            g_NN = self.eval_goals["nn"]["in"][0, goal_idx]
-        else:
-            g_NN = self.eval_goals["nn"]["out"][0, goal_idx]
+        g_emb = None
+        if self.cfg.main.reward in ["rnet", "graph_sig"]:
+            g_emb = self.eval_goals["embs"][goal_idx]
+
+        g_NN = None
+        if self.cfg.main.reward in ["graph", "graph_sig"]:
+            if self.cfg.rnet.memory.directed:
+                g_NN = self.eval_goals["nn"]["in"][0, goal_idx]
+            else:
+                g_NN = self.eval_goals["nn"]["out"][0, goal_idx]
         return g_obs, g_NN, g_emb, g_state
 
     def sample_goal_memory(self):
         goal_idx = np.random.randint(len(self.memory))
         g_obs = self.memory.get_obs(goal_idx)
-        g_emb = self.memory.embs[goal_idx]
         g_state = self.memory.states[goal_idx]
-        g_NN = goal_idx
+
+        g_emb = None
+        if self.cfg.main.reward in ["rnet", "graph_sig"]:
+            g_emb = self.memory.embs[goal_idx]
+
+        g_NN = goal_idx if self.cfg.main.reward in ["graph", "graph_sig"] else None
         return g_obs, g_NN, g_emb, g_state
 
     def sample_goal_memory_bins(self):
@@ -172,20 +186,33 @@ class ReplayBufferFiller:
             return np.stack((s_obs, g_obs))
         return np.stack(s_obs + [g_obs])  # e.g. last 3 frames and the goal frame
 
+    def push_to_rb(self, i, s_obs, next_s_obs, g_obs, action, reward):
+        state = self.process_obs(s_obs, g_obs)
+        next_state = self.process_obs(next_s_obs, g_obs)
+        self.replay_buffer.write(i, state, action, reward, next_state)
+
     def worker_fill(self, proc_id):
         np.random.seed(proc_id + self.epoch * 123 + self.cfg.main.seed * 123456)
         while True:
             i = self.get_safe_i()
             if i == -1:
                 break
-            g_obs, g_NN, g_emb, g_state = self.sample_goal()
 
+            # SAMPLE TRANSITION
             s_obs, s1, s2 = self.expl_buffer.get_random_obs(
                 not_last=True, frame_stack=self.frame_stack
             )
             next_s_obs = self.expl_buffer.get_obs(
                 s1, s2 + 1, frame_stack=self.frame_stack
             )
+
+            # SAMPLE GOAL
+            g_obs, g_NN, g_emb, g_state = self.sample_goal()
+            if self.cfg.main.reward == "act_model":
+                final_obs = next_s_obs.copy()
+                # TO-DO: save obs for critic
+
+            # COMPUTE REWARD
             if self.cfg.main.reward in ["oracle_dense", "oracle_sparse"]:
                 reward = oracle_reward(
                     self.cfg, self.expl_buffer.states[s1, s2 + 1], g_state
@@ -197,10 +224,35 @@ class ReplayBufferFiller:
             if self.cfg.main.reward in ["graph", "graph_sig"]:
                 s_NN = self.memory.nn_out[s1, s2 + 1]
                 reward = -self.memory.dist[s_NN, g_NN]
-            state = self.process_obs(s_obs, g_obs)
-            next_state = self.process_obs(next_s_obs, g_obs)
+
+            # PUSH TO RB
             action = self.expl_buffer.actions[s1, s2 + 1]
-            self.replay_buffer.write(i, state, action, reward, next_state)
+            self.push_to_rb(i, s_obs, next_s_obs, g_obs, action, reward)
+
+            if self.cfg.main.reward == "act_model":
+                i = self.get_safe_i()
+                if i == -1:
+                    break
+                self.push_to_rb(i, s_obs, next_s_obs, final_obs, action, reward=1)
+
+                for j in range(s2 - 1):
+                    s_obs = self.expl_buffer.get_obs(
+                        s1, j, frame_stack=self.frame_stack
+                    )
+                    next_s_obs = self.expl_buffer.get_obs(
+                        s1, j + 1, frame_stack=self.frame_stack
+                    )
+                    action = self.expl_buffer.actions[s1, j + 1]
+
+                    i = self.get_safe_i()
+                    if i == -1:
+                        break
+                    self.push_to_rb(i, s_obs, next_s_obs, final_obs, action, reward=0)
+
+                    i = self.get_safe_i()
+                    if i == -1:
+                        break
+                    self.push_to_rb(i, s_obs, next_s_obs, g_obs, action, reward=0)
 
             if self.cfg.main.subgoal_transitions:
                 assert self.cfg.main.reward in ["graph", "graph_sig"]
@@ -213,9 +265,7 @@ class ReplayBufferFiller:
                         break
                     reward = -self.memory.dist[s_NN, subgoal]
                     subgoal_obs = self.memory.get_obs(subgoal)
-                    state = self.process_obs(s_obs, subgoal_obs)
-                    next_state = self.process_obs(next_s_obs, subgoal_obs)
-                    self.replay_buffer.write(i, state, action, reward, next_state)
+                    self.push_to_rb(i, s_obs, next_s_obs, subgoal_obs, action, reward)
                     if self.cfg.main.reward == "graph_sig":
                         self.s_embs[i] = self.expl_buffer.embs[s1, s2 + 1]
                         self.g_embs[i] = self.memory.embs[subgoal]
