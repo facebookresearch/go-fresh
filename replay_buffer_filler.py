@@ -35,7 +35,7 @@ class ReplayBufferFiller:
         if self.cfg.rnet.memory.directed:
             NN_array = self.memory.nn_in
         else:
-            NN_array = self.nn_out
+            NN_array = self.memory.nn_out
         NN_dict = {x: [] for x in np.arange(len(self.memory))}
         for traj_idx in range(NN_array.shape[0]):
             for step in range(NN_array.shape[1]):
