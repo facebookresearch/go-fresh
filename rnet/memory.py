@@ -108,6 +108,7 @@ class RNetMemory(GraphMemory):
     def compute_NN(self, embs, model):
         num_trajs, traj_len = embs.shape[0], embs.shape[1]
         self.embs = self.embs.to(self.device)
+        embs = embs.to(self.device)
         nn = {"out": np.zeros((num_trajs, traj_len), dtype=int)}
         if self.cfg.directed:
             nn["in"] = np.zeros((num_trajs, traj_len), dtype=int)
