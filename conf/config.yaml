@@ -3,7 +3,7 @@ main:
     suffix:
     logs_dir: /checkpoint/${env:USER}/offline-gcrl/logs/${main.name}  # store all model files
     save_interval: 100
-    reward: graph  # how reward is computed. options: graph_sig, graph, rnet, oracle, act_model
+    reward: graph  # how reward is computed. options: graph_sig, graph, rnet, oracle_dense, oracle_sparse, act_model
     seed: 234
     run: 0  #dummy variable for several runs
     load_from_dir:  # load RNet model, memory and NN from a given directory
@@ -39,7 +39,7 @@ exploration_buffer:
     num_procs: 10
 
 replay_buffer:
-    capacity: 100000
+    capacity: 1000000
     reward_scaling: 0.01
     num_procs: 10
     frame_stack: ${env.frame_stack}  # must match

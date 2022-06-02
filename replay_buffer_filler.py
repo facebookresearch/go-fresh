@@ -3,6 +3,7 @@ import numpy as np
 
 from torch import multiprocessing as mp
 
+import utils
 from envs import make_env, oracle_reward
 
 
@@ -128,7 +129,7 @@ class ReplayBufferFiller:
         else:
             return self.sample_goal_eval()
 
-    def run(self):
+    def run(self, critic=None):
         self.epoch += 1
         if self.memory is not None:
             self.memory.obss = self.memory.obss.to("cpu")
@@ -146,6 +147,20 @@ class ReplayBufferFiller:
             self.g_embs = torch.empty_like(self.s_embs)
             self.s_embs.share_memory_()
             self.g_embs.share_memory_()
+        elif self.cfg.main.reward == "act_model":
+            self.q_obs_batch = torch.empty(
+                (
+                    len(self.replay_buffer),
+                    1 + self.frame_stack,
+                    *self.space_info["shape"]["obs"]
+                ),
+                dtype=utils.TORCH_DTYPE[self.space_info["type"]["obs"]]
+            )
+            self.q_action_batch = torch.empty_like(self.replay_buffer.actions)
+            self.q_mask = torch.zeros(len(self.replay_buffer), dtype=bool)
+            self.q_obs_batch.share_memory_()
+            self.q_action_batch.share_memory_()
+            self.q_mask.share_memory_()
 
         procs = []
         for proc_id in range(self.cfg.replay_buffer.num_procs):
@@ -156,14 +171,25 @@ class ReplayBufferFiller:
         for p in procs:
             p.join()
 
-        if self.cfg.main.reward in ["rnet", "graph_sig"]:
-            with torch.no_grad():
-                self.s_embs = self.s_embs.to(self.device)
-                self.g_embs = self.g_embs.to(self.device)
-                rval = self.rnet_model.compare_embeddings(
-                    self.s_embs, self.g_embs, batchwise=True
-                )
-            rewards = rval[:, 0]
+        if self.cfg.main.reward in ["rnet", "graph_sig", "act_model"]:
+            if self.cfg.main.reward in ["rnet", "graph_sig"]:
+                with torch.no_grad():
+                    self.s_embs = self.s_embs.to(self.device)
+                    self.g_embs = self.g_embs.to(self.device)
+                    rval = self.rnet_model.compare_embeddings(
+                        self.s_embs, self.g_embs, batchwise=True
+                    )
+                rewards = rval[:, 0]
+
+            elif self.cfg.main.reward == "act_model":
+                critic.eval()
+                rewards = torch.zeros(len(self.replay_buffer))
+                self.q_obs_batch = self.q_obs_batch[self.q_mask].to(self.device)
+                self.q_action_batch = self.q_action_batch[self.q_mask].to(self.device)
+                with torch.no_grad():
+                    q_vals, _ = critic(self.q_obs_batch, self.q_action_batch)
+                rewards[self.q_mask] = q_vals[:, 0].cpu()
+
             assert rewards.size(0) == len(self.replay_buffer)
             if self.cfg.main.reward == "graph_sig":
                 rewards = torch.sigmoid(rewards / self.cfg.main.reward_sigm_temp) - 1
@@ -172,6 +198,7 @@ class ReplayBufferFiller:
             rewards *= self.cfg.replay_buffer.reward_scaling
             rewards += self.replay_buffer.rewards[:, 0]
             self.replay_buffer.rewards[:, 0].copy_(rewards)
+            print(self.replay_buffer.rewards[:200, 0])
 
     def get_safe_i(self):
         with self.idx.get_lock():
@@ -205,12 +232,17 @@ class ReplayBufferFiller:
             next_s_obs = self.expl_buffer.get_obs(
                 s1, s2 + 1, frame_stack=self.frame_stack
             )
+            action = self.expl_buffer.actions[s1, s2 + 1]
 
             # SAMPLE GOAL
             g_obs, g_NN, g_emb, g_state = self.sample_goal()
             if self.cfg.main.reward == "act_model":
                 final_obs = next_s_obs.copy()
-                # TO-DO: save obs for critic
+                reward = 0
+                self.q_obs_batch[i, 0] = torch.from_numpy(next_s_obs)
+                self.q_obs_batch[i, 1] = torch.from_numpy(g_obs)
+                self.q_action_batch[i] = torch.from_numpy(action)
+                self.q_mask[i] = True
 
             # COMPUTE REWARD
             if self.cfg.main.reward in ["oracle_dense", "oracle_sparse"]:
@@ -226,7 +258,6 @@ class ReplayBufferFiller:
                 reward = -self.memory.dist[s_NN, g_NN]
 
             # PUSH TO RB
-            action = self.expl_buffer.actions[s1, s2 + 1]
             self.push_to_rb(i, s_obs, next_s_obs, g_obs, action, reward)
 
             if self.cfg.main.reward == "act_model":

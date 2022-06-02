@@ -11,11 +11,13 @@ python main.py \
     replay_buffer.reward_scaling=0.1,0.5 \
     plot.type=wandb \
     main.reward_sigm_temp=1 \
-    sac.optim.lr=0.0003 \
+    sac.optim.lr=0.0003,0.0001 \
     sac.optim.batch_size=2048 \
-    sac.optim.num_updates_per_epoch=1000 \
     sac.optim.entropy.alpha=0.05 \
-    sac.optim.gamma=0.9 \
+    sac.optim.gamma=0.9,0.99 \
     eval.interval_epochs=10 \
+    replay_buffer.num_procs=20 \
+    plot.type=wandb \
     hydra.launcher.partition=devlab \
+    hydra.launcher.cpus_per_task=20 \
     --multirun \

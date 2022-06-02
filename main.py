@@ -53,7 +53,7 @@ def train_policy(
         # TRAIN
         replay_buffer.to("cpu")
         log.info("filling replay buffer")
-        replay_buffer_filler.run()
+        replay_buffer_filler.run(critic=agent.critic)
 
         log.info("train one epoch")
         replay_buffer.to(device)
