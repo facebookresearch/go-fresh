@@ -20,11 +20,13 @@ class ReplayBuffer(object):
             (self.capacity, space_info["action_dim"]), dtype=torch.float32
         )
         self.rewards = torch.empty((self.capacity, 1), dtype=torch.float32)
+        self.not_dones = torch.empty(self.capacity, dtype=torch.bool)
 
-    def write(self, i, state, action, reward, next_state):
+    def write(self, i, state, action, reward, next_state, done=False):
         assert i < self.capacity
         self.actions[i] = torch.from_numpy(action)
         self.rewards[i] = self.cfg.reward_scaling * reward
+        self.not_dones[i] = not done
         for j in range(self.nframes):
             self.states[i, j] = torch.from_numpy(state[j])
             self.next_states[i, j] = torch.from_numpy(next_state[j])
@@ -35,7 +37,7 @@ class ReplayBuffer(object):
         actions = self.actions[idxs].float()
         rewards = self.rewards[idxs].float()
         next_states = self.next_states[idxs].float()
-        mask = torch.ones((batch_size, 1), device=self.device)
+        mask = self.not_dones[idxs]
         return states, actions, rewards, next_states, mask
 
     def share_memory(self):
@@ -43,6 +45,7 @@ class ReplayBuffer(object):
         self.actions.share_memory_()
         self.rewards.share_memory_()
         self.next_states.share_memory_()
+        self.not_dones.share_memory_()
 
     def to(self, device):
         if self.device == device:
@@ -51,6 +54,7 @@ class ReplayBuffer(object):
         self.actions = self.actions.to(device)
         self.rewards = self.rewards.to(device)
         self.next_states = self.next_states.to(device)
+        self.not_dones = self.not_dones.to(device)
         self.device = device
 
     def __len__(self):

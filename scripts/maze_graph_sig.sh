@@ -11,10 +11,10 @@ python main.py \
     replay_buffer.reward_scaling=0.1,0.5 \
     plot.type=wandb \
     main.reward_sigm_temp=1 \
-    sac.optim.lr=0.0003,0.0001 \
+    sac.optim.lr=0.0003,0.0005 \
     sac.optim.batch_size=2048 \
     sac.optim.entropy.alpha=0.05 \
-    sac.optim.gamma=0.9,0.99 \
+    sac.optim.gamma=0.95,0.99 \
     eval.interval_epochs=10 \
     replay_buffer.num_procs=20 \
     plot.type=wandb \

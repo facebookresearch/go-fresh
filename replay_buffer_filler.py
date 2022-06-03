@@ -157,7 +157,7 @@ class ReplayBufferFiller:
                 dtype=utils.TORCH_DTYPE[self.space_info["type"]["obs"]]
             )
             self.q_action_batch = torch.empty_like(self.replay_buffer.actions)
-            self.q_mask = torch.zeros(len(self.replay_buffer), dtype=bool)
+            self.q_mask = torch.zeros(len(self.replay_buffer), dtype=torch.bool)
             self.q_obs_batch.share_memory_()
             self.q_action_batch.share_memory_()
             self.q_mask.share_memory_()
@@ -212,10 +212,10 @@ class ReplayBufferFiller:
             return np.stack((s_obs, g_obs))
         return np.stack(s_obs + [g_obs])  # e.g. last 3 frames and the goal frame
 
-    def push_to_rb(self, i, s_obs, next_s_obs, g_obs, action, reward):
+    def push_to_rb(self, i, s_obs, next_s_obs, g_obs, action, reward, done=False):
         state = self.process_obs(s_obs, g_obs)
         next_state = self.process_obs(next_s_obs, g_obs)
-        self.replay_buffer.write(i, state, action, reward, next_state)
+        self.replay_buffer.write(i, state, action, reward, next_state, done)
 
     def worker_fill(self, proc_id):
         np.random.seed(proc_id + self.epoch * 123 + self.cfg.main.seed * 123456)
@@ -232,6 +232,7 @@ class ReplayBufferFiller:
                 s1, s2 + 1, frame_stack=self.frame_stack
             )
             action = self.expl_buffer.actions[s1, s2 + 1]
+            done = self.cfg.main.reward == "act_model"
 
             # SAMPLE GOAL
             g_obs, g_NN, g_emb, g_state = self.sample_goal()
@@ -262,13 +263,15 @@ class ReplayBufferFiller:
                 reward = -self.memory.dist[s_NN, g_NN]
 
             # PUSH TO RB
-            self.push_to_rb(i, s_obs, next_s_obs, g_obs, action, reward)
+            self.push_to_rb(i, s_obs, next_s_obs, g_obs, action, reward, done)
 
             if self.cfg.main.reward == "act_model":
                 i = self.get_safe_i()
                 if i == -1:
                     break
-                self.push_to_rb(i, s_obs, next_s_obs, final_obs, action, reward=1)
+                self.push_to_rb(
+                    i, s_obs, next_s_obs, final_obs, action, reward=1, done=True
+                )
 
                 for j in range(s2):
                     s_obs = self.expl_buffer.get_obs(
