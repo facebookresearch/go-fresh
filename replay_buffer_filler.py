@@ -198,7 +198,6 @@ class ReplayBufferFiller:
             rewards *= self.cfg.replay_buffer.reward_scaling
             rewards += self.replay_buffer.rewards[:, 0]
             self.replay_buffer.rewards[:, 0].copy_(rewards)
-            print(self.replay_buffer.rewards[:200, 0])
 
     def get_safe_i(self):
         with self.idx.get_lock():
@@ -237,11 +236,16 @@ class ReplayBufferFiller:
             # SAMPLE GOAL
             g_obs, g_NN, g_emb, g_state = self.sample_goal()
             if self.cfg.main.reward == "act_model":
-                final_obs = next_s_obs.copy()
+                if self.frame_stack == 1:
+                    final_obs = next_s_obs.copy()
+                else:
+                    final_obs = next_s_obs[-1].copy()
                 reward = 0
-                self.q_obs_batch[i, 0] = torch.from_numpy(next_s_obs)
-                self.q_obs_batch[i, 1] = torch.from_numpy(g_obs)
-                self.q_action_batch[i] = torch.from_numpy(action)
+                self.q_obs_batch[i, :self.frame_stack].copy_(
+                    torch.from_numpy(np.stack(next_s_obs))
+                )
+                self.q_obs_batch[i, -1].copy_(torch.from_numpy(g_obs))
+                self.q_action_batch[i].copy_(torch.from_numpy(action))
                 self.q_mask[i] = True
 
             # COMPUTE REWARD
@@ -266,7 +270,7 @@ class ReplayBufferFiller:
                     break
                 self.push_to_rb(i, s_obs, next_s_obs, final_obs, action, reward=1)
 
-                for j in range(s2 - 1):
+                for j in range(s2):
                     s_obs = self.expl_buffer.get_obs(
                         s1, j, frame_stack=self.frame_stack
                     )
