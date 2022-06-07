@@ -243,7 +243,7 @@ class ReplayBufferFiller:
                     final_obs = next_s_obs[-1].copy()
                 reward = 0
                 self.q_obs_batch[i, :self.frame_stack].copy_(
-                    torch.from_numpy(np.stack(next_s_obs))
+                    torch.from_numpy(np.stack(s_obs))
                 )
                 self.q_obs_batch[i, -1].copy_(torch.from_numpy(g_obs))
                 self.q_action_batch[i].copy_(torch.from_numpy(action))
