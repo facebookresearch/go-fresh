@@ -20,7 +20,7 @@ class ReplayBuffer(object):
             (self.capacity, space_info["action_dim"]), dtype=torch.float32
         )
         self.rewards = torch.empty((self.capacity, 1), dtype=torch.float32)
-        self.not_dones = torch.empty(self.capacity, dtype=torch.bool)
+        self.not_dones = torch.empty((self.capacity, 1), dtype=torch.bool)
 
     def write(self, i, state, action, reward, next_state, done=False):
         assert i < self.capacity
