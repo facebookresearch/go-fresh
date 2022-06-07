@@ -38,11 +38,17 @@ def train_policy(
 ):
 
     replay_buffer = ReplayBuffer(cfg.replay_buffer, space_info)
-    replay_buffer_filler = ReplayBufferFiller(
-        replay_buffer, expl_buffer, cfg, space_info, device, memory, rnet_model
-    )
-
     agent = sac.SAC(cfg.sac, space_info, device)
+    replay_buffer_filler = ReplayBufferFiller(
+        replay_buffer,
+        expl_buffer,
+        cfg,
+        space_info,
+        device,
+        memory,
+        rnet_model,
+        agent=agent
+    )
 
     procs, buffers, barriers, n_eval_done, info_keys = eval.start_procs(cfg, space_info)
 
@@ -53,7 +59,7 @@ def train_policy(
         # TRAIN
         replay_buffer.to("cpu")
         log.info("filling replay buffer")
-        replay_buffer_filler.run(critic=agent.critic)
+        replay_buffer_filler.run()
 
         log.info("train one epoch")
         replay_buffer.to(device)
