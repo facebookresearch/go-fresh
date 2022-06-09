@@ -5,6 +5,7 @@ import logging
 
 import sac
 import eval
+import envs
 import utils
 
 import rnet.utils as rnet_utils
@@ -34,8 +35,11 @@ def train_policy(
     memory,
     space_info,
     device,
-    tb_log
+    tb_log,
 ):
+    env = envs.make_env(cfg.env, space_info)
+    uniform_action_fn = env.action_space.sample
+    env.close()
 
     replay_buffer = ReplayBuffer(cfg.replay_buffer, space_info)
     agent = sac.SAC(cfg.sac, space_info, device)
@@ -47,7 +51,8 @@ def train_policy(
         device,
         memory,
         rnet_model,
-        agent=agent
+        agent=agent,
+        uniform_action_fn=uniform_action_fn
     )
 
     procs, buffers, barriers, n_eval_done, info_keys = eval.start_procs(cfg, space_info)

@@ -18,6 +18,7 @@ class ReplayBufferFiller:
         memory=None,
         rnet_model=None,
         agent=None,
+        uniform_action_fn=None,
     ):
         self.replay_buffer = replay_buffer
         self.expl_buffer = expl_buffer
@@ -27,6 +28,7 @@ class ReplayBufferFiller:
         self.memory = memory
         self.rnet_model = rnet_model
         self.agent = agent
+        self.uniform_action_fn = uniform_action_fn
         if cfg.train.goal_strat == "memory_bins":
             self.NN_dict = self.compute_NN_dict()
         elif cfg.train.goal_strat in ["one_goal", "all_goal"]:
@@ -195,10 +197,10 @@ class ReplayBufferFiller:
                 rewards[self.q_mask] = q_vals[:, 0].cpu()
 
                 # negative action
-                q_obs_neg = self.q_obs_batch[self.q_mask_neg].to(self.device)
-                with torch.no_grad():
-                    q_action_neg, _, _ = self.agent.policy.sample(q_obs_neg)
-                self.replay_buffer.actions[self.q_mask_neg].copy_(q_action_neg)
+                # q_obs_neg = self.q_obs_batch[self.q_mask_neg].to(self.device)
+                # with torch.no_grad():
+                #    q_action_neg, _, _ = self.agent.policy.sample(q_obs_neg)
+                # self.replay_buffer.actions[self.q_mask_neg].copy_(q_action_neg)
 
             assert rewards.size(0) == len(self.replay_buffer)
             if self.cfg.main.reward == "graph_sig":
@@ -237,7 +239,8 @@ class ReplayBufferFiller:
                 torch.from_numpy(np.stack(s_obs))
             )
             self.q_obs_batch[i, -1].copy_(torch.from_numpy(g_obs))
-            self.replay_buffer.write(i, state, action, 0, next_state, done=True)
+            uniform_action = self.uniform_action_fn()
+            self.replay_buffer.write(i, state, uniform_action, 0, next_state, done=True)
 
     def worker_fill(self, proc_id):
         np.random.seed(proc_id + self.epoch * 123 + self.cfg.main.seed * 123456)
