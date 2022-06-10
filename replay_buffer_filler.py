@@ -36,6 +36,7 @@ class ReplayBufferFiller:
         self.frame_stack = cfg.env.frame_stack
         self.neg_action_mode = cfg.replay_buffer.neg_action
         self.uniform_action_fn = uniform_action_fn
+        self.neg_goal_mode = cfg.replay_buffer.neg_goal
 
     def compute_NN_dict(self):
         if self.cfg.rnet.memory.directed:
@@ -153,22 +154,24 @@ class ReplayBufferFiller:
             self.s_embs.share_memory_()
             self.g_embs.share_memory_()
         elif self.cfg.main.reward == "act_model":
-            self.q_obs_batch = torch.empty(
-                (
-                    len(self.replay_buffer),
-                    1 + self.frame_stack,
-                    *self.space_info["shape"]["obs"]
-                ),
-                dtype=utils.TORCH_DTYPE[self.space_info["type"]["obs"]]
-            )
-            self.q_action_batch = torch.empty_like(self.replay_buffer.actions)
-            self.q_mask = torch.zeros(len(self.replay_buffer), dtype=torch.bool)
-            if self.neg_action_mode is not None:
+            if self.neg_goal_mode == 'critic' or self.neg_action_mode == 'policy':
+                self.q_obs_batch = torch.empty(
+                    (
+                        len(self.replay_buffer),
+                        1 + self.frame_stack,
+                        *self.space_info["shape"]["obs"]
+                    ),
+                    dtype=utils.TORCH_DTYPE[self.space_info["type"]["obs"]]
+                )
+                self.q_obs_batch.share_memory_()
+            if self.neg_goal_mode == 'critic':
+                self.q_action_batch = torch.empty_like(self.replay_buffer.actions)
+                self.q_action_batch.share_memory_()
+                self.q_mask = torch.zeros(len(self.replay_buffer), dtype=torch.bool)
+                self.q_mask.share_memory_()
+            if self.neg_action_mode == 'policy':
                 self.q_mask_neg = torch.zeros(len(self.replay_buffer), dtype=torch.bool)
                 self.q_mask_neg.share_memory_()
-            self.q_obs_batch.share_memory_()
-            self.q_action_batch.share_memory_()
-            self.q_mask.share_memory_()
 
         procs = []
         for proc_id in range(self.cfg.replay_buffer.num_procs):
@@ -190,6 +193,9 @@ class ReplayBufferFiller:
                 rewards = rval[:, 0]
 
             elif self.cfg.main.reward == "act_model":
+                if self.neg_goal_mode == "zero" or self.neg_goal_mode is None:
+                    return
+                assert self.neg_goal_mode == "critic"
                 self.agent.eval()
                 rewards = torch.zeros(len(self.replay_buffer))
                 q_obs_batch = self.q_obs_batch[self.q_mask].to(self.device)
@@ -237,14 +243,15 @@ class ReplayBufferFiller:
             i = self.get_safe_i()
             if i == -1:
                 return
-            self.q_mask_neg[i] = True
-            self.q_obs_batch[i, :self.frame_stack].copy_(
-                torch.from_numpy(np.stack(s_obs))
-            )
-            self.q_obs_batch[i, -1].copy_(torch.from_numpy(g_obs))
             uniform_action = self.uniform_action_fn()   # action will be re-written
             # later  in 'policy' mode
             self.replay_buffer.write(i, state, uniform_action, 0, next_state, done=True)
+            if self.neg_action_mode == 'policy':
+                self.q_mask_neg[i] = True
+                self.q_obs_batch[i, :self.frame_stack].copy_(
+                    torch.from_numpy(np.stack(s_obs))
+                )
+                self.q_obs_batch[i, -1].copy_(torch.from_numpy(g_obs))
 
     def worker_fill(self, proc_id):
         np.random.seed(proc_id + self.epoch * 123 + self.cfg.main.seed * 123456)
@@ -265,21 +272,22 @@ class ReplayBufferFiller:
 
             # SAMPLE GOAL
             g_obs, g_NN, g_emb, g_state = self.sample_goal()
+
+            # COMPUTE REWARD
             if self.cfg.main.reward == "act_model":
                 if self.frame_stack == 1:
                     final_obs = next_s_obs.copy()
                 else:
                     final_obs = next_s_obs[-1].copy()
                 reward = 0
-                self.q_obs_batch[i, :self.frame_stack].copy_(
-                    torch.from_numpy(np.stack(s_obs))
-                )
-                self.q_obs_batch[i, -1].copy_(torch.from_numpy(g_obs))
-                self.q_action_batch[i].copy_(torch.from_numpy(action))
-                self.q_mask[i] = True
-
-            # COMPUTE REWARD
-            if self.cfg.main.reward in ["oracle_dense", "oracle_sparse"]:
+                if self.neg_goal_mode == "critic":
+                    self.q_obs_batch[i, :self.frame_stack].copy_(
+                        torch.from_numpy(np.stack(s_obs))
+                    )
+                    self.q_obs_batch[i, -1].copy_(torch.from_numpy(g_obs))
+                    self.q_action_batch[i].copy_(torch.from_numpy(action))
+                    self.q_mask[i] = True
+            elif self.cfg.main.reward in ["oracle_dense", "oracle_sparse"]:
                 reward = oracle_reward(
                     self.cfg, self.expl_buffer.states[s1, s2 + 1], g_state
                 )

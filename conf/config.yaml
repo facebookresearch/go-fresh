@@ -44,6 +44,7 @@ replay_buffer:
     num_procs: 10
     frame_stack: ${env.frame_stack}  # must match
     neg_action: # null or 'uniform' or 'policy'
+    neg_goal: # null or 'zero' or 'critic'
 
 optim:
     num_epochs: 1001
