@@ -43,6 +43,7 @@ replay_buffer:
     reward_scaling: 0.01
     num_procs: 10
     frame_stack: ${env.frame_stack}  # must match
+    neg_action: # null or 'uniform' or 'policy'
 
 optim:
     num_epochs: 1001

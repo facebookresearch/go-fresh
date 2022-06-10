@@ -28,13 +28,14 @@ class ReplayBufferFiller:
         self.memory = memory
         self.rnet_model = rnet_model
         self.agent = agent
-        self.uniform_action_fn = uniform_action_fn
         if cfg.train.goal_strat == "memory_bins":
             self.NN_dict = self.compute_NN_dict()
         elif cfg.train.goal_strat in ["one_goal", "all_goal"]:
             self.eval_goals = self.get_eval_goals()
         self.epoch = 0
         self.frame_stack = cfg.env.frame_stack
+        self.neg_action_mode = cfg.replay_buffer.neg_action
+        self.uniform_action_fn = uniform_action_fn
 
     def compute_NN_dict(self):
         if self.cfg.rnet.memory.directed:
@@ -162,11 +163,12 @@ class ReplayBufferFiller:
             )
             self.q_action_batch = torch.empty_like(self.replay_buffer.actions)
             self.q_mask = torch.zeros(len(self.replay_buffer), dtype=torch.bool)
-            self.q_mask_neg = torch.zeros(len(self.replay_buffer), dtype=torch.bool)
+            if self.neg_action_mode is not None:
+                self.q_mask_neg = torch.zeros(len(self.replay_buffer), dtype=torch.bool)
+                self.q_mask_neg.share_memory_()
             self.q_obs_batch.share_memory_()
             self.q_action_batch.share_memory_()
             self.q_mask.share_memory_()
-            self.q_mask_neg.share_memory_()
 
         procs = []
         for proc_id in range(self.cfg.replay_buffer.num_procs):
@@ -197,10 +199,11 @@ class ReplayBufferFiller:
                 rewards[self.q_mask] = q_vals[:, 0].cpu()
 
                 # negative action
-                # q_obs_neg = self.q_obs_batch[self.q_mask_neg].to(self.device)
-                # with torch.no_grad():
-                #    q_action_neg, _, _ = self.agent.policy.sample(q_obs_neg)
-                # self.replay_buffer.actions[self.q_mask_neg].copy_(q_action_neg)
+                if self.neg_action_mode == 'policy':
+                    q_obs_neg = self.q_obs_batch[self.q_mask_neg].to(self.device)
+                    with torch.no_grad():
+                        q_action_neg, _, _ = self.agent.policy.sample(q_obs_neg)
+                    self.replay_buffer.actions[self.q_mask_neg].copy_(q_action_neg)
 
             assert rewards.size(0) == len(self.replay_buffer)
             if self.cfg.main.reward == "graph_sig":
@@ -229,7 +232,7 @@ class ReplayBufferFiller:
         next_state = self.process_obs(next_s_obs, g_obs)
         self.replay_buffer.write(i, state, action, reward, next_state, done)
 
-        if self.cfg.main.reward == "act_model":
+        if self.cfg.main.reward == "act_model" and self.neg_action_mode is not None:
             # sample a negative action (will do it later in a batch)
             i = self.get_safe_i()
             if i == -1:
@@ -239,7 +242,8 @@ class ReplayBufferFiller:
                 torch.from_numpy(np.stack(s_obs))
             )
             self.q_obs_batch[i, -1].copy_(torch.from_numpy(g_obs))
-            uniform_action = self.uniform_action_fn()
+            uniform_action = self.uniform_action_fn()   # action will be re-written
+            # later  in 'policy' mode
             self.replay_buffer.write(i, state, uniform_action, 0, next_state, done=True)
 
     def worker_fill(self, proc_id):
