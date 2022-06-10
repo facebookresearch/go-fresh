@@ -2,7 +2,7 @@
 
 python main.py \
     +exp=maze_rnet_asym \
-    main.suffix="rs\${replay_buffer.reward_scaling}-lr\${sac.optim.lr}-alpha\${sac.optim.entropy.alpha}-gamma\${sac.optim.gamma}-\${main.reward}-neg-action-\${replay_buffer.neg_action}-neg-goal-\${replay_buffer.neg_goal}-rb1M" \
+    main.suffix="rs\${replay_buffer.reward_scaling}-lr\${sac.optim.lr}-alpha\${sac.optim.entropy.alpha}-gamma\${sac.optim.gamma}-\${main.reward}-neg-action-\${replay_buffer.neg_action}-neg-goal-\${replay_buffer.neg_goal}-cut100-rb1M" \
     main.reward=act_model \
     replay_buffer.neg_action=null,policy,uniform \
     replay_buffer.neg_goal=zero,critic \

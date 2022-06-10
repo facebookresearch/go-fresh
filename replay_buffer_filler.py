@@ -310,7 +310,8 @@ class ReplayBufferFiller:
                     i, s_obs, next_s_obs, final_obs, action, reward=1, done=True
                 )
 
-                for j in range(s2):
+                start_idx = s2 - s2 % self.cfg.env.max_episode_steps
+                for j in range(start_idx, s2):
                     s_obs = self.expl_buffer.get_obs(
                         s1, j, frame_stack=self.frame_stack
                     )
