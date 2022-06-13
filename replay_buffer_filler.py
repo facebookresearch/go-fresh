@@ -37,6 +37,7 @@ class ReplayBufferFiller:
         self.neg_action_mode = cfg.replay_buffer.neg_action
         self.uniform_action_fn = uniform_action_fn
         self.neg_goal_mode = cfg.replay_buffer.neg_goal
+        self.cut_traj = cfg.replay_buffer.cut_traj
 
     def compute_NN_dict(self):
         if self.cfg.rnet.memory.directed:
@@ -310,7 +311,9 @@ class ReplayBufferFiller:
                     i, s_obs, next_s_obs, final_obs, action, reward=1, done=True
                 )
 
-                start_idx = s2 - s2 % self.cfg.env.max_episode_steps
+                start_idx = (
+                    s2 - s2 % self.cfg.env.max_episode_steps if self.cut_traj else 0
+                )
                 for j in range(start_idx, s2):
                     s_obs = self.expl_buffer.get_obs(
                         s1, j, frame_stack=self.frame_stack

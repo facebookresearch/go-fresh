@@ -45,6 +45,7 @@ replay_buffer:
     frame_stack: ${env.frame_stack}  # must match
     neg_action: # null or 'uniform' or 'policy'
     neg_goal: # null or 'zero' or 'critic'
+    cut_traj: false # add all traj or cut to max_episode_steps
 
 optim:
     num_epochs: 1001
