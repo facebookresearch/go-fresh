@@ -2,12 +2,11 @@
 
 python main.py \
     +env=walker \
-    main.suffix="baseline-AMHER-final-neg-action-\${replay_buffer.neg_action}-neg-goal-\${replay_buffer.neg_goal}" \
+    main.suffix="baseline-\${replay_buffer.algo}" \
+    replay_buffer.algo=AM,HER,HERu \
     main.reward=act_model \
     env.action_repeat=2 \
     main.reward=act_model \
-    replay_buffer.neg_action=null,policy,uniform \
-    replay_buffer.neg_goal=zero,critic \
     sac.optim.batch_size=2048 \
     replay_buffer.reward_scaling=10 \
     sac.optim.lr=0.0001 \

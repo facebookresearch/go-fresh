@@ -34,9 +34,19 @@ class ReplayBufferFiller:
             self.eval_goals = self.get_eval_goals()
         self.epoch = 0
         self.frame_stack = cfg.env.frame_stack
-        self.neg_action_mode = cfg.replay_buffer.neg_action
         self.uniform_action_fn = uniform_action_fn
-        self.neg_goal_mode = cfg.replay_buffer.neg_goal
+        if self.cfg.replay_buffer.algo is None:
+            self.neg_action_mode = cfg.replay_buffer.neg_action
+            self.neg_goal_mode = cfg.replay_buffer.neg_goal
+        elif self.cfg.replay_buffer.algo == "HER":
+            self.neg_action_mode = None
+            self.neg_goal_mode = "zero"
+        elif self.cfg.replay_buffer.algo == "HERu":
+            self.neg_action_mode = "uniform"
+            self.neg_goal_mode = "zero"
+        elif self.cfg.replay_buffer.algo == "AM":
+            self.neg_action_mode = "policy"
+            self.neg_goal_mode = "critic"
         self.cut_traj = cfg.replay_buffer.cut_traj
 
     def compute_NN_dict(self):
@@ -326,7 +336,7 @@ class ReplayBufferFiller:
                     i = self.get_safe_i()
                     if i == -1:
                         break
-                    self.push_to_rb(i, s_obs, next_s_obs, final_obs, action, reward=1)
+                    self.push_to_rb(i, s_obs, next_s_obs, final_obs, action, reward=0)
 
                     i = self.get_safe_i()
                     if i == -1:
