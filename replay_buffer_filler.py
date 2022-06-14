@@ -326,7 +326,7 @@ class ReplayBufferFiller:
                     i = self.get_safe_i()
                     if i == -1:
                         break
-                    self.push_to_rb(i, s_obs, next_s_obs, final_obs, action, reward=0)
+                    self.push_to_rb(i, s_obs, next_s_obs, final_obs, action, reward=1)
 
                     i = self.get_safe_i()
                     if i == -1:
