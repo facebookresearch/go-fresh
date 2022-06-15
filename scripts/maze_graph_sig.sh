@@ -2,7 +2,7 @@
 
 python main.py \
     +exp=maze_rnet_sym \
-    main.suffix='undirected-rs\${replay_buffer.reward_scaling}-gamma\${sac.optim.gamma}' \
+    main.suffix="undirected-rs\${replay_buffer.reward_scaling}-gamma\${sac.optim.gamma}" \
     main.load_from_dir='/checkpoint/linamezghani/offline-gcrl/logs/20220614-090425_maze_U4rooms_rnet_sym_new_s234_r0' \
     main.reward=graph_sig \
     main.edge_transitions=True \
