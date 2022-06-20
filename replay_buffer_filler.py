@@ -4,7 +4,6 @@ import numpy as np
 from torch import multiprocessing as mp
 
 from envs import make_env, oracle_reward
-from rnet.utils import compute_NN
 
 
 class ReplayBufferFiller:
@@ -16,7 +15,6 @@ class ReplayBufferFiller:
         space_info,
         device,
         memory=None,
-        NN=None,
         rnet_model=None,
     ):
         self.replay_buffer = replay_buffer
@@ -25,7 +23,6 @@ class ReplayBufferFiller:
         self.space_info = space_info
         self.device = device
         self.memory = memory
-        self.NN = NN
         self.rnet_model = rnet_model
         if cfg.train.goal_strat == "memory_bins":
             self.NN_dict = self.compute_NN_dict()
@@ -36,9 +33,9 @@ class ReplayBufferFiller:
 
     def compute_NN_dict(self):
         if self.cfg.rnet.memory.directed:
-            NN_array = self.NN["incoming"]
+            NN_array = self.memory.nn_in
         else:
-            NN_array = self.NN["outgoing"]
+            NN_array = self.memory.nn_out
         NN_dict = {x: [] for x in np.arange(len(self.memory))}
         for traj_idx in range(NN_array.shape[0]):
             for step in range(NN_array.shape[1]):
@@ -46,7 +43,7 @@ class ReplayBufferFiller:
         return NN_dict
 
     def get_eval_goals(self):
-        eval_goals = {x: None for x in ["obs", "state", "embs", "NN"]}
+        eval_goals = {x: None for x in ["obs", "state", "embs", "nn"]}
         env = make_env(self.cfg.env, self.space_info)
         eval_goals["obs"] = np.float32(env.get_goals()[f"{self.cfg.env.obs.type}_obs"])
         eval_goals["states"] = env.get_goals()["state"]
@@ -54,7 +51,7 @@ class ReplayBufferFiller:
             goal_obs_pt = torch.from_numpy(eval_goals["obs"]).to(self.device)
             eval_goals["embs"] = self.rnet_model.get_embedding(goal_obs_pt)
             if self.cfg.main.reward in ["graph", "graph_sig"]:
-                eval_goals["NN"] = compute_NN(
+                eval_goals["nn"] = self.memory.compute_NN(
                     eval_goals["embs"].unsqueeze(0),
                     self.rnet_model,
                     self.memory,
@@ -66,9 +63,9 @@ class ReplayBufferFiller:
         g_emb = self.expl_buffer.embs[g1, g2]
         g_state = self.expl_buffer.states[g1, g2]
         if self.cfg.rnet.memory.directed:
-            g_NN = self.NN["incoming"][g1, g2]
+            g_NN = self.memory.nn_in[g1, g2]
         else:
-            g_NN = self.NN["outgoing"][g1, g2]
+            g_NN = self.memory.nn_out[g1, g2]
         return g_obs, g_NN, g_emb, g_state
 
     def sample_goal_rb(self):
@@ -87,9 +84,9 @@ class ReplayBufferFiller:
         g_emb = self.eval_goals["embs"][goal_idx]
         g_state = self.eval_goals["states"][goal_idx]
         if self.cfg.rnet.memory.directed:
-            g_NN = self.eval_goals["NN"]["incoming"][0, goal_idx]
+            g_NN = self.eval_goals["nn"]["in"][0, goal_idx]
         else:
-            g_NN = self.eval_goals["NN"]["outgoing"][0, goal_idx]
+            g_NN = self.eval_goals["nn"]["out"][0, goal_idx]
         return g_obs, g_NN, g_emb, g_state
 
     def sample_goal_memory(self):
@@ -198,7 +195,7 @@ class ReplayBufferFiller:
                 self.g_embs[i] = g_emb
                 reward = 0  # will compute it later in parallel
             if self.cfg.main.reward in ["graph", "graph_sig"]:
-                s_NN = self.NN["outgoing"][s1, s2 + 1]
+                s_NN = self.memory.nn_out[s1, s2 + 1]
                 reward = -self.memory.dist[s_NN, g_NN]
             state = self.process_obs(s_obs, g_obs)
             next_state = self.process_obs(next_s_obs, g_obs)
@@ -222,3 +219,30 @@ class ReplayBufferFiller:
                     if self.cfg.main.reward == "graph_sig":
                         self.s_embs[i] = self.expl_buffer.embs[s1, s2 + 1]
                         self.g_embs[i] = self.memory.embs[subgoal]
+
+            if self.cfg.main.edge_transitions:
+                assert self.cfg.main.reward in ["graph", "graph_sig"]
+                path = self.memory.retrieve_path(s_NN, g_NN)
+                for j in range(len(path) - 1):
+                    edge = (path[j], path[j + 1])
+                    if edge not in self.memory.edge2rb:
+                        continue
+                    i = self.get_safe_i()
+                    if i == -1:
+                        break
+                    trans_list = self.memory.edge2rb[edge]
+                    s1, s2 = trans_list[np.random.randint(len(trans_list))]
+                    s_obs = self.expl_buffer.get_obs(
+                        s1, s2, frame_stack=self.frame_stack
+                    )
+                    next_s_obs = self.expl_buffer.get_obs(
+                        s1, s2 + 1, frame_stack=self.frame_stack
+                    )
+                    reward = -self.memory.dist[path[j + 1], g_NN]
+                    state = self.process_obs(s_obs, g_obs)
+                    next_state = self.process_obs(next_s_obs, g_obs)
+                    action = self.expl_buffer.actions[s1, s2 + 1]
+                    self.replay_buffer.write(i, state, action, reward, next_state)
+                    if self.cfg.main.reward == "graph_sig":
+                        self.s_embs[i] = self.expl_buffer.embs[s1, s2 + 1]
+                        self.g_embs[i] = g_emb

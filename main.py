@@ -1,5 +1,4 @@
 from os import path, system
-import numpy as np
 import torch
 import hydra
 import logging
@@ -17,7 +16,7 @@ from replay_buffer_filler import ReplayBufferFiller
 from exploration_buffer import ExplorationBuffer
 from rnet.model import RNetModel
 from rnet.dataset import RNetPairsSplitDataset
-from rnet.utils import build_memory, compute_NN, embed_expl_buffer
+from rnet.utils import embed_expl_buffer
 
 
 log = logging.getLogger(__name__)
@@ -28,16 +27,11 @@ def train_rnet(cfg, model, expl_buffer, tb_log, device):
     _ = rnet_utils.train(cfg.rnet.train, model, dataset, device, tb_log)
 
 
-def train_memory(cfg, model, expl_buffer, space_info, device):
-    return build_memory(cfg.rnet.memory, space_info, model, expl_buffer, device)
-
-
 def train_policy(
     cfg,
     expl_buffer,
     rnet_model,
     memory,
-    NN,
     space_info,
     device,
     tb_log
@@ -45,7 +39,7 @@ def train_policy(
 
     replay_buffer = ReplayBuffer(cfg.replay_buffer, space_info)
     replay_buffer_filler = ReplayBufferFiller(
-        replay_buffer, expl_buffer, cfg, space_info, device, memory, NN, rnet_model
+        replay_buffer, expl_buffer, cfg, space_info, device, memory, rnet_model
     )
 
     agent = sac.SAC(cfg.sac, space_info, device)
@@ -106,9 +100,8 @@ def main(cfg):
     rnet_path = path.join(cfg.main.logs_dir, "model.pth")
     embs_path = path.join(cfg.main.logs_dir, "embs.pth")
     memory_path = path.join(cfg.main.logs_dir, "memory.npy")
-    NN_path = path.join(cfg.main.logs_dir, "NN.npz")
     if cfg.main.load_from_dir is not None:
-        for file in ["model.pth", "memory.npy", "NN.npz"]:
+        for file in ["model.pth", "memory.npy", "embs.pth"]:
             load_path = path.join(cfg.main.load_from_dir, file)
             if path.exists(load_path):
                 log.info(f"copying from {load_path}")
@@ -141,7 +134,7 @@ def main(cfg):
         # Exploration buffer embeddings
         if path.exists(embs_path):
             log.info(f"Loading embeddings from {embs_path}")
-            embs = torch.load(embs_path, map_location=torch.device('cpu'))
+            embs = torch.load(embs_path)
         else:
             log.info("Embedding exploration_buffer")
             embs = embed_expl_buffer(expl_buffer, rnet_model, device)
@@ -149,22 +142,24 @@ def main(cfg):
         expl_buffer.set_embs(embs)
 
         # Memory and graph
+        memory = RNetMemory(cfg.rnet.memory, space_info, rnet_model.feat_size, device)
         if path.exists(memory_path):
             log.info(f"Loading memory from {memory_path}")
-            memory = RNetMemory(
-                cfg.rnet.memory, space_info, rnet_model.feat_size, device
-            )
             memory.load(memory_path)
         else:
             log.info("Training memory")
-            memory = train_memory(
-                cfg=cfg,
-                model=rnet_model,
-                expl_buffer=expl_buffer,
-                space_info=space_info,
-                device=device,
-            )
-            memory.save(memory_path)
+            memory.build(rnet_model, expl_buffer)
+        if cfg.main.reward in ["graph", "graph_sig"]:
+            # Nearest neigbhor
+            if memory.nn_out is None:
+                log.info("Computing NN")
+                nn = memory.compute_NN(expl_buffer.embs, rnet_model)
+                expl_buffer.embs = expl_buffer.embs.to("cpu")
+                memory.set_nn(nn)
+            if memory.edge2rb is None:
+                log.info("Computing graph")
+                memory.compute_edges(rnet_model)
+        memory.save(memory_path)
         log.info(f"Memory size: {len(memory)}")
         log.info(
             f"Number of connected components: {memory.get_nb_connected_components()}"
@@ -176,22 +171,6 @@ def main(cfg):
         tb_log.close()
         return
 
-    if cfg.main.reward in ["graph", "graph_sig"]:
-        # Nearest neigbhor
-        if path.exists(NN_path):
-            log.info(f"Loading NN from {NN_path}")
-            NN = dict(np.load(NN_path))
-        else:
-            log.info("Computing NN")
-            NN = compute_NN(expl_buffer.embs, rnet_model, memory, device)
-            np.savez(NN_path, **NN)
-    else:
-        NN = None
-
-    if cfg.main.train_until == "NN":
-        tb_log.close()
-        return
-
     # Policy
     log.info("Training policy")
     train_policy(
@@ -199,7 +178,6 @@ def main(cfg):
         expl_buffer=expl_buffer,
         rnet_model=rnet_model,
         memory=memory,
-        NN=NN,
         space_info=space_info,
         device=device,
         tb_log=tb_log,
