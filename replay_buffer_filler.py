@@ -249,15 +249,22 @@ class ReplayBufferFiller:
         next_state = self.process_obs(next_s_obs, g_obs)
         self.replay_buffer.write(i, state, action, reward, next_state, done)
 
-        if self.cfg.main.reward == "act_model" and self.neg_action_mode is not None:
+        if self.neg_action_mode is not None:
             # sample a negative action (will do it later in a batch)
             i = self.get_safe_i()
             if i == -1:
                 return
             uniform_action = self.uniform_action_fn()   # action will be re-written
             # later  in 'policy' mode
-            self.replay_buffer.write(i, state, uniform_action, 0, next_state, done=True)
-            if self.neg_action_mode == 'policy':
+            self.replay_buffer.write(
+                i,
+                state,
+                uniform_action,
+                0,
+                next_state,
+                done=self.cfg.main.reward == "act_model",
+            )
+            if self.cfg.main.reward == "act_model" and self.neg_action_mode == 'policy':
                 self.q_mask_neg[i] = True
                 self.q_obs_batch[i, :self.frame_stack].copy_(
                     torch.from_numpy(np.stack(s_obs))
