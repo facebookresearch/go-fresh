@@ -73,7 +73,7 @@ class ExplorationBuffer(object):
             obs_stack = []
             for t in range(frame_stack):
                 stack_step = step + t - frame_stack + 1
-                stack_step = max(stack_step, 0)     # if step < frame_stack, first obs
+                stack_step = max(0, stack_step)
                 obs_stack.append(self.get_traj(traj_idx)["obs"][stack_step])
             return obs_stack
 
