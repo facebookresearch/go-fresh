@@ -1,0 +1,20 @@
+# @package _global_
+defaults:
+    - /config
+
+env:
+    id: cartpole
+    obs_type: vec
+    success_thresh: 0.7
+    max_episode_steps: 1000
+    action_repeat: 2
+    obs:
+        type: vec
+        state_size: 4
+        vec_size: 5
+        rgb_size: 64
+        no_velocity_size: 2
+    action_dim: 1
+
+exploration_buffer:
+    data_dir: /checkpoint/${env:USER}/offline-gcrl/data/cartpole/icm_apt/buffer

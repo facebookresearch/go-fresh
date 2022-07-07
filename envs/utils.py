@@ -2,6 +2,7 @@ from .base_wrapper import NormalizeActions
 from .maze_utils import oracle_distance as maze_distance
 from .walker_utils import oracle_distance as walker_distance
 from .quadruped_utils import oracle_distance as quadruped_distance
+from .cartpole_utils import oracle_distance as cartpole_distance
 
 
 def make_env(env_cfg, space_info, seed=0):
@@ -9,7 +10,7 @@ def make_env(env_cfg, space_info, seed=0):
         from .maze_env import make_maze_env
 
         env = make_maze_env(env_cfg, space_info)
-    elif env_cfg.id in ["walker", "quadruped"]:
+    elif env_cfg.id in ["walker", "quadruped", "cartpole"]:
         from .dmc2gym_env import make_dmc2gym_env
 
         env = make_dmc2gym_env(env_cfg, space_info, seed)
@@ -27,6 +28,8 @@ def oracle_reward(cfg, x1, x2):
         oracle_distance = walker_distance
     elif cfg.env.id == 'quadruped':
         oracle_distance = quadruped_distance
+    elif cfg.env.id == 'cartpole':
+        oracle_distance = cartpole_distance
     else:
         raise ValueError()
 

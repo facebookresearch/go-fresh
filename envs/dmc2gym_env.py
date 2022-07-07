@@ -5,9 +5,10 @@ from gym.wrappers.time_limit import TimeLimit
 from .base_wrapper import BaseWrapper
 from .walker_utils import oracle_distance as walker_distance
 from .quadruped_utils import oracle_distance as quadruped_distance
+from .cartpole_utils import oracle_distance as cartpole_distance
 
 
-tasks = {"walker": "walk", "quadruped": "walk"}
+tasks = {"walker": "walk", "quadruped": "walk", "cartpole": "swingup"}
 
 
 class Dmc2GymWrapper(BaseWrapper):
@@ -52,6 +53,8 @@ class Dmc2GymWrapper(BaseWrapper):
             if hasattr(self, "goal_idx"):
                 goal_idx = self.goal_idx
             return quadruped_distance(x1, x2, goal_idx=goal_idx)
+        elif self.cfg.id == "cartpole":
+            return cartpole_distance(x1, x2)
         raise NotImplementedError
 
     def set_info_keys(self):
