@@ -5,7 +5,7 @@ defaults:
 env:
     id: cartpole
     obs_type: vec
-    success_thresh: 0.7
+    success_thresh: 0.5
     max_episode_steps: 1000
     action_repeat: 2
     obs:
@@ -17,4 +17,4 @@ env:
     action_dim: 1
 
 exploration_buffer:
-    data_dir: /checkpoint/${env:USER}/offline-gcrl/data/cartpole/icm_apt/buffer
+    algo: proto

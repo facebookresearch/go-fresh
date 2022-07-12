@@ -35,7 +35,8 @@ env:
     frame_stack: 1  # number of frames to stack. only applies to the current obs in policy and critic.
 
 exploration_buffer:
-    data_dir:
+    algo:
+    data_dir: /checkpoint/${env:USER}/offline-gcrl/data/${env.id}/${exploration_buffer.algo}/buffer
     num_procs: 10
 
 replay_buffer:

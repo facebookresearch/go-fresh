@@ -1,7 +1,7 @@
 import numpy as np
 
 import envs
-import dmc2gym_utils
+import envs.dmc2gym_utils as dmc2gym_utils
 
 
 def oracle_distance(x1, x2):
