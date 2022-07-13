@@ -14,18 +14,18 @@ python main.py \
     main.edge_transitions=True \
     sac.policy.head.remove_velocity=False \
     main.subgoal_transitions=True \
-    #replay_buffer.neg_action=uniform,null \
-    #plot.type=wandb \
-    #main.seed=234,123,345 \
-    #train.goal_strat=rb \
-    #main.reward_sigm_temp=1 \
-    #eval.interval_epochs=20 \
-    #sac.optim.batch_size=2048 \
-    #replay_buffer.reward_scaling=0.5 \
-    #sac.optim.lr=0.0003 \
-    #sac.optim.entropy.alpha=0.01 \
-    #sac.optim.gamma=0.95 \
-    #hydra.launcher.cpus_per_task=20 \
-    #optim.num_epochs=5001 \
-    #hydra.launcher.partition=devlab \
-    #--multirun \
+    replay_buffer.neg_action=uniform,null \
+    plot.type=wandb \
+    main.seed=234,123,345 \
+    train.goal_strat=rb \
+    main.reward_sigm_temp=1 \
+    eval.interval_epochs=20 \
+    sac.optim.batch_size=2048 \
+    replay_buffer.reward_scaling=0.5 \
+    sac.optim.lr=0.0003 \
+    sac.optim.entropy.alpha=0.01 \
+    sac.optim.gamma=0.95 \
+    hydra.launcher.cpus_per_task=20 \
+    optim.num_epochs=5001 \
+    hydra.launcher.partition=devlab \
+    --multirun \
