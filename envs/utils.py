@@ -3,6 +3,7 @@ from .maze_utils import oracle_distance as maze_distance
 from .walker_utils import oracle_distance as walker_distance
 from .quadruped_utils import oracle_distance as quadruped_distance
 from .cartpole_utils import oracle_distance as cartpole_distance
+from .pusher_utils import oracle_distance as pusher_distance
 
 
 def make_env(env_cfg, space_info, seed=0):
@@ -14,6 +15,10 @@ def make_env(env_cfg, space_info, seed=0):
         from .dmc2gym_env import make_dmc2gym_env
 
         env = make_dmc2gym_env(env_cfg, space_info, seed)
+    elif env_cfg.id == "pusher":
+        from .pusher_env import make_pusher_env
+
+        env = make_pusher_env(env_cfg, space_info)
     else:
         raise ValueError(f"wrong env name {env_cfg.id}")
     env.seed(seed)
@@ -30,6 +35,8 @@ def oracle_reward(cfg, x1, x2):
         oracle_distance = quadruped_distance
     elif cfg.env.id == 'cartpole':
         oracle_distance = cartpole_distance
+    elif cfg.env.id == 'pusher':
+        oracle_distance = pusher_distance
     else:
         raise ValueError()
 
