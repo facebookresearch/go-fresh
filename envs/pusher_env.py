@@ -18,6 +18,10 @@ class PusherWrapper(BaseWrapper):
         self.xlim = (-0.20, 0.20)
         self.ylim = (0.45, 0.75)
 
+    def set_info_keys(self):
+        super().set_info_keys()
+        self.info_keys += ['hand_distance', 'puck_distance']
+
     def get_state_from_obs(self, obs):
         return obs['state_observation']
 
