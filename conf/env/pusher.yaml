@@ -5,8 +5,8 @@ defaults:
 env:
     id: pusher
     obs_type: vec
-    success_thresh: 1.0
-    max_episode_steps: 100
+    success_thresh: 0.0075
+    max_episode_steps: 50
     obs:
         type: vec
         state_size: 4
@@ -16,4 +16,4 @@ env:
     action_dim: 2
 
 exploration_buffer:
-    data_dir: /checkpoint/${env:USER}/offline-gcrl/data/pusher/random
+    data_dir: /checkpoint/${env:USER}/offline-gcrl/data/pusher/random-rsp
