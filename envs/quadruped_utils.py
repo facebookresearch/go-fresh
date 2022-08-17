@@ -5,13 +5,6 @@ from scipy.spatial.transform import Rotation
 from envs.walker_utils import shortest_angle
 
 
-def get_state_from_lexa(env, state):
-    new_state = np.pad(state, (0, 34), mode="constant")
-    env.unwrapped._env.physics.set_state(new_state)
-    env.unwrapped._env.physics.forward()
-    return env.get_state()
-
-
 def quat2euler(quat):
     rot = Rotation.from_quat(quat)
     return rot.as_euler('XYZ')

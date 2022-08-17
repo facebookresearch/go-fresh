@@ -17,4 +17,4 @@ env:
     action_dim: 6
 
 exploration_buffer:
-    data_dir: /checkpoint/${env:USER}/offline-gcrl/data/walker/proto/buffer
+    algo: proto

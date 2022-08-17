@@ -17,4 +17,4 @@ env:
     action_dim: 12
 
 exploration_buffer:
-    data_dir: /checkpoint/${env:USER}/offline-gcrl/data/quadruped/aps/buffer
+    algo: aps
