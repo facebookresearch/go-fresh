@@ -13,6 +13,7 @@ python main.py \
     replay_buffer.num_procs=20 \
     hydra.launcher.cpus_per_task=20 \
     eval.interval_epochs=20 \
+    main.seed=234,123,345 \
     plot.type=wandb \
     hydra.launcher.partition=devlab \
     --multirun \
