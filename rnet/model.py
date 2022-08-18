@@ -103,8 +103,8 @@ class RNetModel(nn.Module):
     def save(self, path):
         torch.save(self.state_dict(), path)
 
-    def load(self, path):
-        self.load_state_dict(torch.load(path))
+    def load(self, path, device=None):
+        self.load_state_dict(torch.load(path, map_location=device))
 
     def pairwise_distances(self, x, y=None):
         """
