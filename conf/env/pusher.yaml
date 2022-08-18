@@ -5,7 +5,7 @@ defaults:
 env:
     id: pusher
     obs_type: vec
-    success_thresh: 0.0075
+    success_thresh: 0.015
     max_episode_steps: 50
     obs:
         type: vec
