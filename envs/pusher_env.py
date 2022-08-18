@@ -80,13 +80,29 @@ class PusherWrapper(BaseWrapper):
         plt.title('puck')
         return fig
 
-    def plot_graph_dist(self, curri):
+    def plot_graph_dist(self, memory, show_path=True, start=None, end=None):
         fig = plt.figure()
-        states = curri.memory.states[:len(curri.memory)]
-        i = np.random.randint(0, len(curri.memory))
-        sc = plt.scatter(states[:, 2], states[:, 3], c=-curri.memory.graph_dist[i])
+        states = memory.states[: len(memory)]
+        if end is None:
+            end = np.random.randint(0, len(memory))
+        sc = plt.scatter(states[:, 2], states[:, 3], c=-memory.dist[end])
+
+        if show_path:
+            if start is None:
+                n_trials = 0
+                while True:
+                    n_trials += 1
+                    start = np.random.randint(0, len(memory))
+                    if n_trials > 100 or np.linalg.norm(states[start, 2:]) < 2:
+                        break
+
+            path = memory.retrieve_path(start, end)
+            for j in range(len(path) - 1):
+                temp = states[[path[j], path[j + 1]]]
+                plt.plot(temp[:, 2], temp[:, 3], color="red")
+                plt.scatter(temp[:, 2], temp[:, 3], color="red")
         plt.colorbar(sc)
-        plt.scatter(states[i, 2], states[i, 3], c='red', marker='x', s=100)
+        plt.scatter(states[end, 2], states[end, 3], c="red", marker="x", s=100)
         plt.xlim(self.xlim)
         plt.ylim(self.ylim)
         plt.grid()
