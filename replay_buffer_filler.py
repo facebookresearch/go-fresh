@@ -47,6 +47,9 @@ class ReplayBufferFiller:
         elif self.cfg.replay_buffer.algo == "AM":
             self.neg_action_mode = "policy"
             self.neg_goal_mode = "critic"
+        elif self.cfg.replay_buffer.algo == "AMz":
+            self.neg_action_mode = "policy"
+            self.neg_goal_mode = "zero"
         self.cut_traj = cfg.replay_buffer.cut_traj
 
     def compute_NN_dict(self):
