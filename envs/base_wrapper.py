@@ -3,7 +3,7 @@ import gym
 import numpy as np
 import matplotlib.pyplot as plt
 
-WORK_DIR = "/private/home/linamezghani/code/pytorch-soft-actor-critic/"
+WORK_DIR = "/private/home/linamezghani/code/offline-gcrl/"
 
 
 class NormalizeActions:
@@ -45,7 +45,7 @@ class BaseWrapper(gym.core.Wrapper):
         self.action_space.seed(seed)
 
     def load_topline_goals(self):
-        goals_file = os.path.join(WORK_DIR, f"envs/topline_goals/{self.cfg.id}.npy")
+        goals_file = os.path.join(WORK_DIR, f"envs/eval_goals/{self.cfg.id}.npy")
         if os.path.isfile(goals_file):
             self.set_goals(np.load(goals_file, allow_pickle=True).tolist())
         else:
@@ -62,7 +62,7 @@ class BaseWrapper(gym.core.Wrapper):
         self.set_goals(goals)
 
     def save_topline_goals(self, goals):
-        goals_file = os.path.join(WORK_DIR, f"envs/topline_goals/{self.cfg.id}.npy")
+        goals_file = os.path.join(WORK_DIR, f"envs/eval_goals/{self.cfg.id}.npy")
         np.save(goals_file, goals)
 
     def init_observation_space(self, space_info):

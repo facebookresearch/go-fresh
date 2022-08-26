@@ -128,7 +128,7 @@ def main(cfg):
         log.info(rnet_model)
         if path.exists(rnet_path):
             log.info(f"Loading RNet from {rnet_path}")
-            rnet_model.load(rnet_path)
+            rnet_model.load(rnet_path, device=device)
         else:
             log.info("Training RNet")
             train_rnet(cfg, rnet_model, expl_buffer, tb_log, device)

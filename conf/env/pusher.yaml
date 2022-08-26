@@ -1,0 +1,19 @@
+# @package _global_
+defaults:
+    - /config
+
+env:
+    id: pusher
+    obs_type: vec
+    success_thresh: 0.015
+    max_episode_steps: 50
+    obs:
+        type: vec
+        state_size: 4
+        vec_size: 4
+        rgb_size: 64
+        no_velocity_size: 4
+    action_dim: 2
+
+exploration_buffer:
+    data_dir: /checkpoint/${env:USER}/offline-gcrl/data/pusher/random-rsp
