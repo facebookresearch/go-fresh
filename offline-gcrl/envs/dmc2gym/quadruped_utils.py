@@ -2,7 +2,7 @@ import numpy as np
 
 from scipy.spatial.transform import Rotation
 
-from envs.walker_utils import shortest_angle
+from .dmc2gym_utils import shortest_angle
 
 
 def quat2euler(quat):

@@ -2,7 +2,7 @@ import torch
 import multiprocessing as mp
 import numpy as np
 
-import envs
+from .envs import make_env
 
 
 def start_procs(cfg, space_info):
@@ -61,7 +61,7 @@ def run(
 
 def worker_eval(cfg, space_info, i, buffers, barriers, n_eval_done):
     np.random.seed(i * cfg.main.seed)
-    env = envs.make_env(cfg.env, space_info, seed=i)
+    env = make_env(cfg.env, space_info, seed=i)
     for _ in range((cfg.optim.num_epochs - 1) // cfg.eval.interval_epochs + 1):
         barriers["sta"].wait()
         goal_idx = cfg.eval.goal_idx if cfg.train.goal_strat == "one_goal" else None
@@ -124,7 +124,7 @@ def create_mputils(cfg, space_info, ctx):
 
     n_eval_done = Value("i", 0)
 
-    env = envs.make_env(cfg.env, space_info)
+    env = make_env(cfg.env, space_info)
     info_keys = env.info_keys
     env.close()
 

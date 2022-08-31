@@ -1,13 +1,6 @@
 import numpy as np
 
-
-def shortest_angle(angle):
-    if not angle.shape:
-        return shortest_angle(angle[None])[0]
-    angle = angle % (2 * np.pi)
-    angle[angle > np.pi] = 2 * np.pi - angle[angle > np.pi]
-    return angle
-
+from .dmc2gym_utils import shortest_angle
 
 def oracle_distance(x1, x2):
     assert x1.shape[0] in [9, 18], x2.shape[0] in [9, 18]

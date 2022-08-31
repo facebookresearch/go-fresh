@@ -7,7 +7,7 @@ import torch.nn.functional as F
 from tqdm import tqdm
 from torch.optim import Adam
 
-from model import GaussianPolicy, QNetwork, DeterministicPolicy
+from .model import GaussianPolicy, QNetwork, DeterministicPolicy
 
 
 log = logging.getLogger(__name__)

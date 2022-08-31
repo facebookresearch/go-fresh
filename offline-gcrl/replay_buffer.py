@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 
-import utils
+from .utils import TORCH_DTYPE
 
 
 class ReplayBuffer(object):
@@ -13,7 +13,7 @@ class ReplayBuffer(object):
         self.nframes = cfg.frame_stack + 1  # 1 extra for goal
         self.states = torch.empty(
             (self.capacity, self.nframes, *space_info["shape"]["obs"]),
-            dtype=utils.TORCH_DTYPE[space_info["type"]["obs"]]
+            dtype=TORCH_DTYPE[space_info["type"]["obs"]]
         )
         self.next_states = torch.empty_like(self.states)
         self.actions = torch.empty(

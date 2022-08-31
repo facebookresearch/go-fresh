@@ -3,8 +3,8 @@ import numpy as np
 
 from torch import multiprocessing as mp
 
-import utils
-from envs import make_env, oracle_reward
+from .utils import TORCH_DTYPE
+from .envs import make_env, oracle_reward
 
 
 class ReplayBufferFiller:
@@ -175,7 +175,7 @@ class ReplayBufferFiller:
                         1 + self.frame_stack,
                         *self.space_info["shape"]["obs"]
                     ),
-                    dtype=utils.TORCH_DTYPE[self.space_info["type"]["obs"]]
+                    dtype=TORCH_DTYPE[self.space_info["type"]["obs"]]
                 )
                 self.q_obs_batch.share_memory_()
             if self.neg_goal_mode == 'critic':

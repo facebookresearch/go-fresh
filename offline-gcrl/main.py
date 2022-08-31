@@ -3,21 +3,16 @@ import torch
 import hydra
 import logging
 
-import sac
-import eval
-import envs
-import utils
+from . import eval
 
-import rnet.utils as rnet_utils
-
-from rnet.memory import RNetMemory
-from logger import Logger
-from replay_buffer import ReplayBuffer
-from replay_buffer_filler import ReplayBufferFiller
-from exploration_buffer import ExplorationBuffer
-from rnet.model import RNetModel
-from rnet.dataset import RNetPairsSplitDataset
-from rnet.utils import embed_expl_buffer
+from .sac import SAC
+from .envs import make_env
+from .logger import Logger
+from .replay_buffer import ReplayBuffer
+from .utils import fix_seed, get_space_info
+from .exploration_buffer import ExplorationBuffer
+from .replay_buffer_filler import ReplayBufferFiller
+from .rnet import rnet_utils, RNetMemory, RNetModel, RNetPairsSplitDataset
 
 
 log = logging.getLogger(__name__)
@@ -37,12 +32,12 @@ def train_policy(
     device,
     tb_log,
 ):
-    env = envs.make_env(cfg.env, space_info)
+    env = make_env(cfg.env, space_info)
     uniform_action_fn = env.action_space.sample
     env.close()
 
     replay_buffer = ReplayBuffer(cfg.replay_buffer, space_info)
-    agent = sac.SAC(cfg.sac, space_info, device)
+    agent = SAC(cfg.sac, space_info, device)
     replay_buffer_filler = ReplayBufferFiller(
         replay_buffer,
         expl_buffer,
@@ -105,7 +100,7 @@ def main(cfg):
     tb_log = Logger(cfg.main.logs_dir, cfg)
     log.info(f"exp name: {cfg.main.name}")
 
-    utils.fix_seed(cfg.main.seed)
+    fix_seed(cfg.main.seed)
 
     # setup paths and load
     rnet_path = path.join(cfg.main.logs_dir, "model.pth")
@@ -119,7 +114,7 @@ def main(cfg):
                 system(f"cp {load_path} {cfg.main.logs_dir}/")
 
     device = torch.device("cuda")
-    space_info = utils.get_space_info(cfg.env.obs, cfg.env.action_dim)
+    space_info = get_space_info(cfg.env.obs, cfg.env.action_dim)
     expl_buffer = ExplorationBuffer(cfg.exploration_buffer)
 
     if cfg.main.reward in ["rnet", "graph", "graph_sig"]:
@@ -148,7 +143,7 @@ def main(cfg):
             embs = torch.load(embs_path)
         else:
             log.info("Embedding exploration_buffer")
-            embs = embed_expl_buffer(expl_buffer, rnet_model, device)
+            embs = rnet_utils.embed_expl_buffer(expl_buffer, rnet_model, device)
             torch.save(embs, embs_path)
         expl_buffer.set_embs(embs)
 

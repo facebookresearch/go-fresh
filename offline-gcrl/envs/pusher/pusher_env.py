@@ -5,11 +5,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from matplotlib import collections as mc
-
-import envs.pusher_utils as utils
-
 from gym.wrappers.time_limit import TimeLimit
-from envs.base_wrapper import BaseWrapper
+
+from .. import BaseWrapper
+from .pusher_utils import oracle_distance
 
 
 class PusherWrapper(BaseWrapper):
@@ -49,7 +48,7 @@ class PusherWrapper(BaseWrapper):
         return metrics
 
     def oracle_distance(self, x1, x2):
-        return utils.oracle_distance(x1, x2)
+        return oracle_distance(x1, x2)
 
     def process_info(self, info, metrics):
         return super().process_info({}, metrics)

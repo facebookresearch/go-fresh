@@ -1,7 +1,8 @@
 import os
+import wandb
+
 from omegaconf import OmegaConf
 from torch.utils.tensorboard import SummaryWriter
-import wandb
 
 
 class Logger:

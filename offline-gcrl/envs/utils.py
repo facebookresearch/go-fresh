@@ -1,22 +1,20 @@
 from .base_wrapper import NormalizeActions
-from .maze_utils import oracle_distance as maze_distance
-from .walker_utils import oracle_distance as walker_distance
-from .quadruped_utils import oracle_distance as quadruped_distance
-from .cartpole_utils import oracle_distance as cartpole_distance
-from .pusher_utils import oracle_distance as pusher_distance
+from .maze import maze_distance
+from .dmc2gym import walker_distance, quadruped_distance, cartpole_distance
+from .pusher import pusher_distance
 
 
 def make_env(env_cfg, space_info, seed=0):
     if env_cfg.id.startswith("maze"):
-        from .maze_env import make_maze_env
+        from .maze.maze_env import make_maze_env
 
         env = make_maze_env(env_cfg, space_info)
     elif env_cfg.id in ["walker", "quadruped", "cartpole"]:
-        from .dmc2gym_env import make_dmc2gym_env
+        from .dmc2gym.dmc2gym_env import make_dmc2gym_env
 
         env = make_dmc2gym_env(env_cfg, space_info, seed)
     elif env_cfg.id == "pusher":
-        from .pusher_env import make_pusher_env
+        from pusher.pusher_env import make_pusher_env
 
         env = make_pusher_env(env_cfg, space_info)
     else:
