@@ -95,7 +95,7 @@ def train_policy(
         p.join()
 
 
-@hydra.main(config_path="conf", config_name="config.yaml")
+@hydra.main(config_path="../conf", config_name="config.yaml")
 def main(cfg):
     tb_log = Logger(cfg.main.logs_dir, cfg)
     log.info(f"exp name: {cfg.main.name}")
