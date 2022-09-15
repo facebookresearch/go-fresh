@@ -165,6 +165,7 @@ def main(cfg):
             if memory.edge2rb is None:
                 log.info("Computing graph")
                 memory.compute_edges(rnet_model)
+        memory.embs = memory.embs.to("cpu")
         memory.save(memory_path)
         log.info(f"Memory size: {len(memory)}")
         log.info(

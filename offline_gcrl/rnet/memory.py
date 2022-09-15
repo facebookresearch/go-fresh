@@ -225,7 +225,7 @@ class RNetMemory(GraphMemory):
         return rnet_vals.view(bsz, memsz).max(dim=1)[1].cpu()
 
     def build(self, model, expl_buffer):
-        assert not model.training
+        model.eval()
         expl_buffer.embs = expl_buffer.embs.to(self.device)
         x = torch.from_numpy(expl_buffer.get_obs(0, 0)).to(self.device)
         self.add_first_obs(model, x, expl_buffer.get_state(0, 0))
