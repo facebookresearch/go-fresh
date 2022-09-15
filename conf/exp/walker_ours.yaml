@@ -1,0 +1,30 @@
+# @package _global_
+defaults:
+    - /env/walker
+
+main:
+    suffix: walker_ours
+
+rnet:
+    dataset:
+        thresh: 2
+    model:
+        remove_velocity: True
+        hidden_size: 128
+        comp_n_layers: 4
+        feat_size: 128
+    train:
+        lr: 0.0003
+        num_epochs: 100
+    memory:
+        capacity: 10000
+
+sac:
+    optim:
+        gamma: 0.95
+        entropy:
+            alpha: 0.01
+
+replay_buffer:
+    reward_scaling: 0.5
+    num_procs: 20

@@ -1,0 +1,20 @@
+# @package _global_
+defaults:
+    - /env/maze_U4rooms
+
+rnet:
+    dataset:
+        thresh: 5
+    model:
+        remove_velocity: 
+    train:
+        num_epochs: 20
+
+sac:
+    optim:
+        gamma: 0.90
+        entropy:
+            alpha: 0.05
+
+replay_buffer:
+    reward_scaling: 0.1
