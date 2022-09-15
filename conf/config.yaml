@@ -3,15 +3,15 @@ main:
     suffix:
     logs_dir: /checkpoint/${env:USER}/offline-gcrl/logs/${main.name}  # store all model files
     save_interval: 100
-    reward: graph  # how reward is computed. options: graph_sig, graph, rnet, oracle_dense, oracle_sparse, act_model
+    reward: graph_sig  # how reward is computed. options: graph_sig, graph, rnet, oracle_dense, oracle_sparse, act_model
     seed: 234
     run: 0  #dummy variable for several runs
     load_from_dir:  # load RNet model, memory and NN from a given directory
     train_until: policy  # specify which step to end training. Steps are: rnet -> memory -> policy
     reward_sigm_temp: 1.0  # temperature for sigmoid reward
     reward_sigm_weight: 1.0  # the weight of rnet sigmoid part in reward
-    subgoal_transitions: false
-    edge_transitions: false
+    subgoal_transitions: true
+    edge_transitions: true
 
 plot:
     type: tb  # where to log. options: tb, wandb, none
@@ -76,8 +76,8 @@ sac:
         frame_stack: ${env.frame_stack}  # must match
     
     optim:
-        lr: 0.001 
-        batch_size: 1024
+        lr: 0.0003
+        batch_size: 2048
         num_updates_per_epoch: 1000
         tau: 0.005
         gamma: 0.99
@@ -103,24 +103,24 @@ rnet:
         neg_thresh: 0  # sample negative pairs within this distance
         in_traj_ratio: 0.5  # use the same trajectory for negative pairs
         neg_ratio: 0.5  # the ratio of negative samples
-        symmetric: true
+        symmetric: false
         valid_ratio: 0.05  # ratio of data to be used as validation
         num_pairs:
             train: 500000  # not the actual data size
             val: 100000  # not the actual data size
     train:
         lr: 0.001
-        num_epochs: 10
+        num_epochs: 20
         batch_size: 512
         num_workers: 32
         weight_decay: 0.00001
     memory:
         thresh: 0
-        capacity: 500
-        node_skip: 0.01 # percentage of expl_buffer obs NOT to skip
-        edge_skip: 0.01 # percentage of expl_buffer transitions NOT to skip
+        capacity: 1000
+        node_skip: 0.05 # percentage of expl_buffer obs NOT to skip
+        edge_skip: 0.05 # percentage of expl_buffer transitions NOT to skip
         NN_batch_size: 1001
-        directed: false
+        directed: true
 
 hydra:
     launcher:

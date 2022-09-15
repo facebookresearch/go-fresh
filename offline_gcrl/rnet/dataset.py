@@ -39,7 +39,7 @@ class RNetPairsDataset(torch.utils.data.Dataset):
         elif in_traj and self.cfg.neg_thresh > 0:
             low = max(low, i1 - self.cfg.neg_thresh)
             high = min(i1 + self.cfg.neg_thresh, high)
-        return low, high
+        return low, high + 1
 
     def __len__(self):
         return self.num_pairs
@@ -47,7 +47,7 @@ class RNetPairsDataset(torch.utils.data.Dataset):
     def __getitem__(self, i, enforce_neg=False):
         pos = 0 if enforce_neg else int(np.random.random() > self.cfg.neg_ratio)
         traj1 = self.traj_buffer.sample(range=self.traj_range)["obs"]
-        i1 = np.random.randint(0, self.traj_len - 1)
+        i1 = np.random.randint(0, self.traj_len)
 
         in_traj = pos or np.random.random() < self.cfg.in_traj_ratio
         traj2 = (
