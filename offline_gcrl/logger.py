@@ -29,10 +29,10 @@ class Logger:
             for k, v in stats.items():
                 self.writer.add_scalar(f"{tb_tab}/{k}", v, epoch)
         elif self.cfg.plot.type == "wandb":
-            metrics = {}
+            metrics = {"epoch": epoch}
             for k, v in stats.items():
                 metrics[f"{tb_tab}/{k}"] = v
-            wandb.log(metrics, step=epoch)
+            wandb.log(metrics)
 
     def close(self):
         if self.cfg.plot.type == "wandb":
