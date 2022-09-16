@@ -32,7 +32,7 @@ class Logger:
             metrics = {"epoch": epoch}
             for k, v in stats.items():
                 metrics[f"{tb_tab}/{k}"] = v
-            wandb.log(metrics)
+            wandb.log(metrics, step=epoch)
 
     def close(self):
         if self.cfg.plot.type == "wandb":
