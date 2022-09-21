@@ -2,19 +2,26 @@
 defaults:
     - /env/maze_U4rooms
 
+main:
+    suffix: ours
+
 rnet:
     dataset:
         thresh: 5
     model:
-        remove_velocity: 
+        remove_velocity: True
     train:
+        lr: 0.001
         num_epochs: 20
+    memory:
+        capacity: 1000
 
 sac:
     optim:
-        gamma: 0.90
+        gamma: 0.9
         entropy:
             alpha: 0.05
 
 replay_buffer:
     reward_scaling: 0.1
+    num_procs: 20

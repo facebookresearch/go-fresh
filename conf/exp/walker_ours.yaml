@@ -3,7 +3,7 @@ defaults:
     - /env/walker
 
 main:
-    suffix: walker_ours
+    suffix: ours
 
 rnet:
     dataset:
