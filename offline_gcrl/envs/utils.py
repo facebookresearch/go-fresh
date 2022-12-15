@@ -14,7 +14,7 @@ def make_env(env_cfg, space_info, seed=0):
 
         env = make_dmc2gym_env(env_cfg, space_info, seed)
     elif env_cfg.id == "pusher":
-        from pusher.pusher_env import make_pusher_env
+        from .pusher.pusher_env import make_pusher_env
 
         env = make_pusher_env(env_cfg, space_info)
     else:

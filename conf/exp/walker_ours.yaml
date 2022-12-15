@@ -4,6 +4,8 @@ defaults:
 
 main:
     suffix: ours
+    subgoal_transitions: True
+    edge_transitions: True
 
 rnet:
     dataset:
