@@ -64,7 +64,7 @@ def train(cfg, model, dataset, device, tb_log=None):
             tb_log.add_stats(stats[epoch]["train"], epoch, "rnet/train")
             tb_log.add_stats(stats[epoch]["val"], epoch, "rnet/val")
     model.eval()
-    return stats
+    return
 
 
 def embed_expl_buffer(expl_buffer, model, device):

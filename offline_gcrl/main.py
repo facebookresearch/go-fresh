@@ -20,7 +20,7 @@ log = logging.getLogger(__name__)
 
 def train_rnet(cfg, model, expl_buffer, tb_log, device):
     dataset = RNetPairsSplitDataset(cfg.rnet.dataset, expl_buffer)
-    _ = rnet_utils.train(cfg.rnet.train, model, dataset, device, tb_log)
+    rnet_utils.train(cfg.rnet.train, model, dataset, device, tb_log)
 
 
 def train_policy(

@@ -11,8 +11,8 @@ rnet:
     model:
         remove_velocity: True
     train:
-        lr: 0.0003
-        num_epochs: 50
+        lr: 0.001
+        num_epochs: 100
     memory:
         capacity: 1000
         node_skip: 0.01
