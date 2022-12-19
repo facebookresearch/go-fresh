@@ -1,7 +1,7 @@
 #!/bin/bash
 
 python -m offline_gcrl.main \
-    +exp=walker_AM \
+    +exp=walker_baseline \
     replay_buffer.algo=AM,HER,HERu \
     main.seed=234,123,345 \
     plot.type=wandb \

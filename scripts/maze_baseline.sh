@@ -1,7 +1,7 @@
 #!/bin/bash
 
 python -m offline_gcrl.main \
-    +exp=maze_AM \
+    +exp=maze_baseline \
     replay_buffer.algo=AM,HER,HERu \
     hydra.launcher.cpus_per_task=20 \
     eval.interval_epochs=20 \

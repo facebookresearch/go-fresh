@@ -5,12 +5,12 @@ defaults:
 main:
     suffix: ours
     subgoal_transitions: True
-    edge_transitions: False
+    edge_transitions: True
     reward_sigm_weight: 100
 
 rnet:
     dataset:
-        thresh: 5
+        thresh: 10
     train:
         lr: 0.001
         num_epochs: 100
