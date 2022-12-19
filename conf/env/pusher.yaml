@@ -4,9 +4,10 @@ defaults:
 
 env:
     id: pusher
-    obs_type: vec
     success_thresh: 0.015
     max_episode_steps: 50
+    action_repeat: 1
+    random_start_pos: false
     obs:
         type: vec
         state_size: 4

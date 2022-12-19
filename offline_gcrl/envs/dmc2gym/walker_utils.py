@@ -2,6 +2,7 @@ import numpy as np
 
 from .dmc2gym_utils import shortest_angle
 
+
 def oracle_distance(x1, x2):
     assert x1.shape[0] in [9, 18], x2.shape[0] in [9, 18]
     x1, x2 = x1[:9], x2[:9]
