@@ -8,7 +8,14 @@ by [Lina Mezghani](https://linamezghani.github.io/), [Sainbayar Sukhbaatar](http
 
 ## Prerequisites
 
-TODO
+
+### Install [Mujoco-Maze](https://github.com/kngwyu/mujoco-maze) from source
+
+```
+git clone https://github.com/kngwyu/mujoco-maze.git
+cd mujoco-maze
+pip install -e .
+```
 
 ## Generating Data
 
