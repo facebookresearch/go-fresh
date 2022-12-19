@@ -1,3 +1,14 @@
-# Offline Goal-Conditioned Reinforcement Learning
+# Learning Goal-Conditioned Policies Offline with Self-Supervised Reward Shaping
 
-repo for offline goal-conditioned RL experiments
+This is the original implementation of the paper
+
+**Learning Goal-Conditioned Policies Offline with Self-Supervised Reward Shaping** [[Project Page]](https://linamezghani.github.io/go-fresh) [[Paper]](https://openreview.net/forum?id=8tmKW-NG2bH)
+
+by [Lina Mezghani](https://linamezghani.github.io/), [Sainbayar Sukhbaatar](https://scholar.google.com/citations?user=ri1sE34AAAAJ&hl=en), [Piotr Bojanowski](https://scholar.google.fr/citations?user=lJ_oh2EAAAAJ&hl=en), [Alessandro Lazaric](https://scholar.google.com/citations?user=6JZ3R6wAAAAJ&hl=en), [Karteek Alahari](https://lear.inrialpes.fr/people/alahari/)
+
+## Prerequisites
+
+TODO
+
+## Generating Data
+
