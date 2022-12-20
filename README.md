@@ -1,4 +1,4 @@
-# Learning Goal-Conditioned Policies Offline with Self-Supervised Reward Shaping
+# Go-Fresh: Learning Goal-Conditioned Policies Offline with Self-Supervised Reward Shaping
 
 This is the original implementation of the paper
 
@@ -8,13 +8,25 @@ by [Lina Mezghani](https://linamezghani.github.io/), [Sainbayar Sukhbaatar](http
 
 ## Prerequisites
 
+### 1. Install [MuJoCo](https://mujoco.org/)
 
-### Install [Mujoco-Maze](https://github.com/kngwyu/mujoco-maze) from source
+* Download MuJoCo binaries v2.2.0 [here](https://github.com/deepmind/mujoco/releases)
+* Unzip the downloaded archive into `~/.mujoco/`
+* Append the MuJoCo subdirectory bin path into the env variable `LD_LIBRARY_PATH`
+
+### 2. Create conda environment
+
+```
+conda env create -f conda_env.yml
+conda activate go-fresh
+```
+
+### 2. Install [mujoco-maze](https://github.com/kngwyu/mujoco-maze) from source
 
 ```
 git clone https://github.com/kngwyu/mujoco-maze.git
 cd mujoco-maze
-pip install -e .
+pip install --no-deps -e .
 ```
 
 ## Generating Data
