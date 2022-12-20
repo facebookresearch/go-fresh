@@ -1,6 +1,6 @@
 # @package _global_
 defaults:
-    - /env/maze_U4rooms
+    - /env/maze
 
 main:
     suffix: ours
