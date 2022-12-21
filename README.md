@@ -81,4 +81,6 @@ where `ENV` can be chosen in `maze`, `walker`, `pusher`.
 
 ### Details
 
-The seed can be chosen by setting the `main.seed` parameter. All experiments presented in the paper were ran with the following random seeds: [123, 234, 345].
+* To visualize training info with [Weights&Biases](https://wandb.ai/), simply set parameter `wandb.enable=True`.
+
+* The seed can be chosen by setting the `main.seed` parameter. All experiments presented in the paper were ran with the following random seeds: [123, 234, 345].
