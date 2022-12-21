@@ -9,10 +9,9 @@ log = logging.getLogger(__name__)
 
 class ExplorationBuffer(object):
     def __init__(self, cfg):
-        self.cfg = cfg
+        self.cfg = cfg.exploration_buffer
         self.print_fn = log.info
-        dir_path = pathlib.Path(__file__).resolve().parent.parent
-        self.load_data(dir_path / cfg.data_dir)
+        self.load_data(pathlib.Path(cfg.main.cwd) / self.cfg.data_dir)
         self.embs = None
 
     def read_x(self, path):

@@ -173,7 +173,7 @@ class SAC(object):
 
     # Save model parameters
     def save_checkpoint(self, logs_dir, epoch):
-        save_dir = os.path.join(logs_dir, "agent")
+        save_dir = os.path.realpath(os.path.join(logs_dir, "agent"))
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
         save_path = os.path.join(save_dir, f"checkpoint_{epoch}.pth")

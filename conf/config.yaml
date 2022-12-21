@@ -1,7 +1,8 @@
 main:
     name: ${now:%Y%m%d-%H%M%S}_${env.id}_${main.suffix}_s${main.seed}_r${main.run}
     suffix:
-    logs_dir: /checkpoint/${env:USER}/offline-gcrl/logs/${main.name}  # store all model files
+    cwd:
+    logs_dir:
     save_interval: 100
     reward: graph_sig  # how reward is computed. options: graph_sig, graph, rnet, oracle_dense, oracle_sparse, act_model
     seed: 234
@@ -16,7 +17,6 @@ main:
 wandb:
     enable: False
     project: offline_gcrl_${env.id}
-    dir: /checkpoint/${env:USER}/offline-gcrl/logs/wandb
     group: ${main.suffix}
 
 env:

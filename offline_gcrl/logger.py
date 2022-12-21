@@ -1,20 +1,19 @@
-import os
 import wandb
+import pathlib
 
 from omegaconf import OmegaConf
 
 
 class Logger:
-    def __init__(self, logs_dir, cfg):
-        self.logs_dir = logs_dir
+    def __init__(self, cfg):
         self.cfg = cfg
-        os.makedirs(logs_dir, exist_ok=True)
         if cfg.wandb.enable:
-            os.makedirs(cfg.wandb.dir, exist_ok=True)
+            wandb_dir = pathlib.Path(cfg.main.cwd) / "logs"
+            wandb_dir.mkdir(exist_ok=True)
             wandb.init(
                 project=cfg.wandb.project,
                 name=cfg.main.name,
-                dir=cfg.wandb.dir,
+                dir=wandb_dir,
                 group=cfg.wandb.group,
             )
             cfg_dict = OmegaConf.to_container(cfg, resolve=True, throw_on_missing=True)

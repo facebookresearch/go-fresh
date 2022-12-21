@@ -1,4 +1,5 @@
 from os import path, system
+import pathlib
 import torch
 import hydra
 import logging
@@ -18,9 +19,9 @@ from .rnet import rnet_utils, RNetMemory, RNetModel, RNetPairsSplitDataset
 log = logging.getLogger(__name__)
 
 
-def train_rnet(cfg, model, expl_buffer, tb_log, device):
+def train_rnet(cfg, model, expl_buffer, vis_log, device):
     dataset = RNetPairsSplitDataset(cfg.rnet.dataset, expl_buffer)
-    rnet_utils.train(cfg.rnet.train, model, dataset, device, tb_log)
+    rnet_utils.train(cfg.rnet.train, model, dataset, device, vis_log)
 
 
 def train_policy(
@@ -30,7 +31,7 @@ def train_policy(
     memory,
     space_info,
     device,
-    tb_log,
+    vis_log,
 ):
     env = make_env(cfg.env, space_info)
     uniform_action_fn = env.action_space.sample
@@ -69,7 +70,7 @@ def train_policy(
         )
         num_updates += train_stats["updates"]
         train_stats["updates"] = num_updates
-        tb_log.add_stats(train_stats, epoch, "train")
+        vis_log.add_stats(train_stats, epoch, "train")
 
         # EVAL
         if epoch % cfg.eval.interval_epochs == 0:
@@ -86,7 +87,7 @@ def train_policy(
             log.info(
                 "eval " + " - ".join([f"{k}: {v:.2f}" for k, v in eval_stats.items()])
             )
-            tb_log.add_stats(eval_stats, epoch, "eval")
+            vis_log.add_stats(eval_stats, epoch, "eval")
 
         if epoch % cfg.main.save_interval == 0:
             agent.save_checkpoint(cfg.main.logs_dir, epoch)
@@ -97,25 +98,29 @@ def train_policy(
 
 @hydra.main(config_path="../conf", config_name="config.yaml")
 def main(cfg):
-    tb_log = Logger(cfg.main.logs_dir, cfg)
+    cfg.main.cwd = hydra.utils.get_original_cwd()
+    logs_dir = pathlib.Path(cfg.main.cwd) / "logs" / cfg.main.name
+    cfg.main.logs_dir = logs_dir.as_posix()
+    logs_dir.mkdir(exist_ok=True)
+    vis_log = Logger(cfg)
     log.info(f"exp name: {cfg.main.name}")
 
     fix_seed(cfg.main.seed)
 
     # setup paths and load
-    rnet_path = path.join(cfg.main.logs_dir, "model.pth")
-    embs_path = path.join(cfg.main.logs_dir, "embs.pth")
-    memory_path = path.join(cfg.main.logs_dir, "memory.npy")
+    rnet_path = logs_dir / "model.pth"
+    embs_path = logs_dir / "embs.pth"
+    memory_path = logs_dir / "memory.npy"
     if cfg.main.load_from_dir is not None:
         for file in ["model.pth", "memory.npy", "embs.pth"]:
             load_path = path.join(cfg.main.load_from_dir, file)
             if path.exists(load_path):
                 log.info(f"copying from {load_path}")
-                system(f"cp {load_path} {cfg.main.logs_dir}/")
+                system(f"cp {load_path} {logs_dir}/")
 
     device = torch.device("cuda")
     space_info = get_space_info(cfg.env.obs, cfg.env.action_dim)
-    expl_buffer = ExplorationBuffer(cfg.exploration_buffer)
+    expl_buffer = ExplorationBuffer(cfg)
 
     if cfg.main.reward in ["rnet", "graph", "graph_sig"]:
         # RNet
@@ -126,14 +131,14 @@ def main(cfg):
             rnet_model.load(rnet_path, device=device)
         else:
             log.info("Training RNet")
-            train_rnet(cfg, rnet_model, expl_buffer, tb_log, device)
+            train_rnet(cfg, rnet_model, expl_buffer, vis_log, device)
             log.info(f"Saving RNet to {rnet_path}")
             rnet_model.save(rnet_path)
     else:
         rnet_model = None
 
     if cfg.main.train_until == "rnet":
-        tb_log.close()
+        vis_log.close()
         return
 
     if cfg.main.reward in ["rnet", "graph", "graph_sig"]:
@@ -175,7 +180,7 @@ def main(cfg):
         memory = None
 
     if cfg.main.train_until == "memory":
-        tb_log.close()
+        vis_log.close()
         return
 
     # Policy
@@ -187,10 +192,10 @@ def main(cfg):
         memory=memory,
         space_info=space_info,
         device=device,
-        tb_log=tb_log,
+        vis_log=vis_log,
     )
 
-    tb_log.close()
+    vis_log.close()
 
 
 if __name__ == "__main__":
