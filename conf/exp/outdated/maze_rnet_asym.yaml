@@ -1,9 +1,0 @@
-# @package _global_
-defaults:
-    - /env/maze_U4rooms
-
-rnet:
-    dataset:
-        thresh: 5 
-    model:
-        remove_velocity: True
