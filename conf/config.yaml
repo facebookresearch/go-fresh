@@ -16,7 +16,7 @@ main:
 
 wandb:
     enable: False
-    project: offline_gcrl_${env.id}
+    project: go-fresh_${env.id}
     group: ${main.suffix}
 
 env:
