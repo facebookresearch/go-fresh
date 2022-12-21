@@ -13,11 +13,11 @@ main:
     subgoal_transitions: false
     edge_transitions: false
 
-plot:
-    type: tb  # where to log. options: tb, wandb, none
-    wandb_project: offline_gcrl_${env.id}
-    wandb_dir: /checkpoint/${env:USER}/offline-gcrl/logs/wandb
-    wandb_group: ${main.suffix}
+wandb:
+    enable: False
+    project: offline_gcrl_${env.id}
+    dir: /checkpoint/${env:USER}/offline-gcrl/logs/wandb
+    group: ${main.suffix}
 
 env:
     id: maze_U4rooms
@@ -131,11 +131,6 @@ hydra:
         tasks_per_node: 1
         partition: learnlab
         name: ${main.name}
-
-    # job_logging:
-    #     formatters:
-    #         simple:
-    #             format: '[%(levelname)s] - %(message)s'
 
     sweep:
         dir: /checkpoint/${env:USER}/offline-gcrl/logs/multirun/${main.name}

@@ -16,7 +16,6 @@ dependencies:
     - numpy==1.21.6
     - pygame==2.0.1
     - scikit-learn==0.24.1
-    - tensorboard==2.7.0
     - torch==1.10.2
     - tqdm==4.46.1
     - wandb==0.13.3
