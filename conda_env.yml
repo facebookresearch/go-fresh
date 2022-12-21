@@ -7,7 +7,6 @@ dependencies:
   - pip:
     - gym==0.15.4
     - hydra-core==1.1.1
-    - hydra-submitit-launcher==1.1.6
     - git+https://github.com/denisyarats/dmc2gym.git
     - git+https://github.com/vitchyr/multiworld.git
     - matplotlib==3.5.2

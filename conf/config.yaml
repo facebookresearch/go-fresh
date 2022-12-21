@@ -120,20 +120,3 @@ rnet:
         edge_skip: 0.05 # percentage of expl_buffer transitions NOT to skip
         NN_batch_size: 1001
         directed: true
-
-hydra:
-    launcher:
-        nodes: 1
-        cpus_per_task: 10
-        signal_delay_s: 30
-        timeout_min: 4230
-        gpus_per_node: 1
-        tasks_per_node: 1
-        partition: learnlab
-        name: ${main.name}
-
-    sweep:
-        dir: /checkpoint/${env:USER}/offline-gcrl/logs/multirun/${main.name}
-
-defaults:
-    - override hydra/launcher: submitit_slurm
