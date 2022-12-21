@@ -47,7 +47,7 @@ python -m offline_gcrl.generate_data --env pusher --ep-len 200
 
 ### Walker
 
-Execute the following steps (from [here](https://github.com/denisyarats/exorl#datasets)) to download the dataset of exploration trajectories collected on the `walker` env with the `proto` algorithm.
+Execute the following steps (from [here](https://github.com/denisyarats/exorl#datasets)) to download the dataset of exploration trajectories collected on the `walker` environment with the `proto` algorithm.
 
 ```
 git clone https://github.com/denisyarats/exorl.git
