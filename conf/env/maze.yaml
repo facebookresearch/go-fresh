@@ -17,7 +17,7 @@ env:
     action_dim: 2
 
 exploration_buffer:
-    data_dir: /checkpoint/${env:USER}/offline-gcrl/data/maze_U4rooms-rsp/random
+    data_dir: data/maze
 
 eval:
     interval_epochs: 10

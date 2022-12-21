@@ -1,4 +1,4 @@
-import os
+import pathlib
 import logging
 import numpy as np
 import multiprocessing as mp
@@ -11,7 +11,8 @@ class ExplorationBuffer(object):
     def __init__(self, cfg):
         self.cfg = cfg
         self.print_fn = log.info
-        self.load_data(cfg.data_dir)
+        dir_path = pathlib.Path(__file__).resolve().parent.parent
+        self.load_data(dir_path / cfg.data_dir)
         self.embs = None
 
     def read_x(self, path):
@@ -31,10 +32,13 @@ class ExplorationBuffer(object):
         return traj_buffer
 
     def load_data(self, data_dir):
-        self.print_fn(f"loading exploration buffer from {self.cfg.data_dir}")
-        ep_files = [os.path.join(data_dir, f) for f in os.listdir(data_dir)]
+        self.print_fn(f"loading exploration buffer from {data_dir}")
         # exclude hidden files
-        ep_files = [f for f in ep_files if not os.path.basename(f).startswith(".")]
+        ep_files = [
+            f
+            for f in data_dir.iterdir()
+            if not any(part.startswith(".") for part in f.parts)
+        ]
         ep_files.sort()  # make sure ordering is always the same
         x_list = self.parallel_read(ep_files, num_procs=self.cfg.num_procs)
         self.obss = x_list["observation"]

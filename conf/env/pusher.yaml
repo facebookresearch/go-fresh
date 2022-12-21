@@ -17,4 +17,7 @@ env:
     action_dim: 2
 
 exploration_buffer:
-    data_dir: /checkpoint/${env:USER}/offline-gcrl/data/pusher/random-rsp
+    data_dir: data/pusher
+
+eval:
+    interval_epochs: 20

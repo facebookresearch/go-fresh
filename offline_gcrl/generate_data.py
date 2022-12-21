@@ -42,11 +42,13 @@ if __name__ == "__main__":
     parser.add_argument(
         "--num-procs", "-p", type=int, help="number of procs", default=10
     )
-    parser.add_argument("--ep-len", "-l", type=int, help="episode length", default=1000)
-    parser.add_argument("--data-dir", "-s", type=str, required=True, help="data dir")
+    parser.add_argument("--ep-len", "-l", type=int, help="episode length")
+    parser.add_argument("--data-dir", "-s", type=str, help="data dir", default='data')
     args = parser.parse_args()
 
-    save_dir = pathlib.Path(args.data_dir) / args.env
+    data_dir = pathlib.Path(args.data_dir)
+    data_dir.mkdir(exist_ok=True)
+    save_dir = data_dir / args.env
     save_dir.mkdir(exist_ok=True)
 
     cfg = OmegaConf.load(f"conf/env/{args.env}.yaml")

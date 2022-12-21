@@ -17,7 +17,7 @@ env:
     action_dim: 6
 
 exploration_buffer:
-    algo: proto
+    data_dir: data/walker
 
 eval:
     interval_epochs: 20
