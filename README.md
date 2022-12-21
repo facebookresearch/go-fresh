@@ -29,5 +29,16 @@ cd mujoco-maze
 pip install --no-deps -e .
 ```
 
-## Generating Data
+## Generate Data
 
+## Run the code
+
+### Baselines
+
+To run baselines mentioned in the paper, HER, HER + random uniform action and Actionable Models, run the following command:
+
+```
+python -m offline_gcrl.main +exp={env}_baseline replay_buffer.algo={algo}
+```
+
+where `env` can be chosen in `[maze, walker, pusher]`, and `algo` in `[HER, HERu, AM]`.
