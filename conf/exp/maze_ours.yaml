@@ -1,0 +1,31 @@
+# @package _global_
+defaults:
+    - /env/maze
+
+main:
+    suffix: ours
+    subgoal_transitions: True
+    edge_transitions: True
+
+rnet:
+    dataset:
+        thresh: 5
+    model:
+        remove_velocity: True
+    train:
+        lr: 0.001
+        num_epochs: 100
+    memory:
+        capacity: 1000
+        node_skip: 0.01
+        edge_skip: 0.01
+
+sac:
+    optim:
+        gamma: 0.9
+        entropy:
+            alpha: 0.05
+
+replay_buffer:
+    reward_scaling: 0.1
+    num_procs: 20

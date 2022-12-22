@@ -1,0 +1,23 @@
+# @package _global_
+defaults:
+    - /config
+
+env:
+    id: maze_U4rooms
+    success_thresh: 1.0
+    max_episode_steps: 100
+    action_repeat: 1
+    random_start_pos: false
+    obs:
+        type: vec
+        state_size: 7
+        vec_size: 7
+        rgb_size: 64
+        no_velocity_size: 3
+    action_dim: 2
+
+exploration_buffer:
+    data_dir: data/maze
+
+eval:
+    interval_epochs: 10

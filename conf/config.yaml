@@ -1,0 +1,122 @@
+main:
+    name: ${now:%Y%m%d-%H%M%S}_${env.id}_${main.suffix}_s${main.seed}_r${main.run}
+    suffix:
+    cwd:
+    logs_dir:
+    save_interval: 100
+    reward: graph_sig  # how reward is computed. options: graph_sig, graph, rnet, oracle_dense, oracle_sparse, act_model
+    seed: 234
+    run: 0  #dummy variable for several runs
+    load_from_dir:  # load RNet model, memory and NN from a given directory
+    train_until: policy  # specify which step to end training. Steps are: rnet -> memory -> policy
+    reward_sigm_temp: 1.0  # temperature for sigmoid reward
+    reward_sigm_weight: 1.0  # the weight of rnet sigmoid part in reward
+    subgoal_transitions: false
+    edge_transitions: false
+
+wandb:
+    enable: False
+    project: go-fresh_${env.id}
+    group: ${main.suffix}
+
+env:
+    id: maze_U4rooms
+    success_thresh: 0.5
+    max_episode_steps: 100
+    action_repeat: 1
+    random_start_pos: false
+    obs:
+        type: vec
+        state_size:
+        vec_size:
+        rgb_size:
+        no_velocity_size:
+    action_dim:
+    frame_stack: 1  # number of frames to stack. only applies to the current obs in policy and critic.
+
+exploration_buffer:
+    data_dir:
+    num_procs: 10
+
+replay_buffer:
+    capacity: 1000000
+    reward_scaling: 0.01
+    num_procs: 10
+    frame_stack: ${env.frame_stack}  # must match
+    algo: # HER or AM or HERu
+    neg_action: # null or 'uniform' or 'policy'
+    neg_goal: # null or 'zero' or 'critic'
+    cut_traj: false # add all traj or cut to max_episode_steps
+
+optim:
+    num_epochs: 1001
+
+train:
+    goal_strat: rb # goal sampling strategy: memory | memory_bins | rb (replay buffer) | one_goal (one eval goal by eval.goal_idx) | all_goal (all eval goals)
+
+eval:
+    num_episodes: 500
+    num_procs: 10
+    goal_idx:
+    interval_epochs: 1  # run eval every K epochs
+
+sac:
+    policy:
+        type: Gaussian
+        hidden_size: 256
+        head:
+            type: fc
+            out_size: 16
+            hidden_size: 64
+            n_layers: 3
+            normalize: true  # divide the input by 255, except for FC head
+            remove_velocity: false
+            dims_to_keep: ${env.obs.no_velocity_size}
+        frame_stack: ${env.frame_stack}  # must match
+    
+    optim:
+        lr: 0.0003
+        batch_size: 2048
+        num_updates_per_epoch: 1000
+        tau: 0.005
+        gamma: 0.99
+        target_update_interval: 1
+        entropy:
+            alpha: 0.01
+            auto_tuning: false
+            lr: 0.0003
+        policy:
+            lr: ${sac.optim.lr}  #use different LR for the policy
+
+rnet:
+    model:
+        feat_size: 16
+        hidden_size: 64
+        comparator: net
+        n_layers: 3  # of the feature encoder
+        comp_n_layers: 2  # of the net comparator
+        remove_velocity: true #remove velocity for maze
+        dims_to_keep: ${env.obs.no_velocity_size}
+    dataset:
+        thresh: 10
+        neg_thresh: 0  # sample negative pairs within this distance
+        in_traj_ratio: 0.5  # use the same trajectory for negative pairs
+        neg_ratio: 0.5  # the ratio of negative samples
+        symmetric: false
+        valid_ratio: 0.05  # ratio of data to be used as validation
+        num_pairs:
+            train: 500000  # not the actual data size
+            val: 100000  # not the actual data size
+    train:
+        lr: 0.001
+        num_epochs: 20
+        batch_size: 512
+        num_workers: 32
+        weight_decay: 0.00001
+    memory:
+        thresh: 0
+        capacity: 1000
+        node_skip: 0.05 # percentage of expl_buffer obs NOT to skip
+        edge_skip: 0.05 # percentage of expl_buffer transitions NOT to skip
+        NN_batch_size: 1001
+        directed: true

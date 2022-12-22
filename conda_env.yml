@@ -1,0 +1,20 @@
+name: go-fresh
+channels:
+  - defaults
+dependencies:
+  - python=3.7.4
+  - pip=22.2.2
+  - pip:
+    - gym==0.15.4
+    - hydra-core==1.1.1
+    - git+https://github.com/denisyarats/dmc2gym.git
+    - git+https://github.com/vitchyr/multiworld.git
+    - matplotlib==3.5.2
+    - mujoco==2.2.0
+    - mujoco-py==2.1.2.14
+    - numpy==1.21.6
+    - pygame==2.0.1
+    - scikit-learn==0.24.1
+    - torch==1.10.2
+    - tqdm==4.46.1
+    - wandb==0.13.3

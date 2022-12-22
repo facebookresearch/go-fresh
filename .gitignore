@@ -1,0 +1,12 @@
+__pycache__/
+runs/
+.idea
+*.swp
+*.swo
+*.nfs*
+*.ipynb_checkpoints
+# *.ipynb*
+
+outputs
+jobs
+.vscode
