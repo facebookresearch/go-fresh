@@ -36,13 +36,13 @@ The data used to train our model and baselines can be generated as follows:
 ### Maze
 
 ```shell
-python -m offline_gcrl.generate_data --env maze --ep-len 1000
+python -m go_fresh.generate_data --env maze --ep-len 1000
 ```
 
 ### Pusher
 
 ```shell
-python -m offline_gcrl.generate_data --env pusher --ep-len 200
+python -m go_fresh.generate_data --env pusher --ep-len 200
 ```
 
 ### Walker
@@ -64,7 +64,7 @@ mv ./datasets/walker/proto/buffer data/walker
 To run baselines mentioned in the paper, HER, HER + random uniform action and Actionable Models, run the following command:
 
 ```shell
-python -m offline_gcrl.main +exp=<ENV>_baseline replay_buffer.algo=<ALGO>
+python -m go_fresh.main +exp=<ENV>_baseline replay_buffer.algo=<ALGO>
 ```
 
 where `ENV` can be chosen in `maze`, `walker`, `pusher`, and `ALGO` in `HER`, `HERu`, `AM`.
@@ -74,7 +74,7 @@ where `ENV` can be chosen in `maze`, `walker`, `pusher`, and `ALGO` in `HER`, `H
 To reproduce our method's results, run
 
 ```shell
-python -m offline_gcrl.main +exp=<ENV>_ours
+python -m go_fresh.main +exp=<ENV>_ours
 ```
 
 where `ENV` can be chosen in `maze`, `walker`, `pusher`.
